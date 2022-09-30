@@ -35,7 +35,7 @@
  * @typedef {Object} GameState
  * @property {Number} turn Current total turn count
  * @property {Number} turnOfPlayer player int, 0, 1, etc that is currently making moves
- * @property {Array.<Number>} lifepoints LP count of all players
+ * @property {Number} memory memory count, second player is represented by negative integer value
  */
 
 /**
@@ -448,10 +448,7 @@ class Game {
          turn: 0,
          turnOfPlayer: 0,
          phase: 0,
-         lifepoints: [
-             8000,
-             8000
-         ]
+         memory: 0
      };
      this.decks = {
          0: {
@@ -672,7 +669,7 @@ class Game {
 
  /**
   * Generate a full view of the field for all view types.
-  * @param {string} action callback case statement this should trigger, defaults to 'duel'.
+  * @param {string} action callback case statement this should trigger, defaults to 'game'.
   * @returns {Object} complete view of the current field based on the stack for every view type.
   */
  generateView(action) {
@@ -682,19 +679,19 @@ class Game {
      var output = {
          names: this.names,
          p0: {
-             duelAction: action || 'duel',
+             gameAction: action || 'game',
              info: this.state,
              field: this.generatePlayer1View(),
              player: 0
          },
          p1: {
-             duelAction: action || 'duel',
+             gameAction: action || 'game',
              info: this.state,
              field: this.generatePlayer2View(),
              player: 1
          },
          spectator: {
-             duelAction: action || 'duel',
+             gameAction: action || 'game',
              info: this.state,
              field: this.generateSpectatorView()
          }
@@ -803,21 +800,21 @@ class Game {
      });
      this.callback({
          p0: {
-             duelAction: 'reveal',
+             gameAction: 'reveal',
              info: this.state,
              reveal: reveal,
              call: call,
              player: player
          },
          p1: {
-             duelAction: 'reveal',
+             gameAction: 'reveal',
              info: this.state,
              reveal: reveal,
              call: call,
              player: player
          },
          sepectators: {
-             duelAction: 'reveal',
+             gameAction: 'reveal',
              info: this.state,
              reveal: reveal,
              call: call,
@@ -841,10 +838,7 @@ class Game {
   * @returns {undefined}
   */
  startDuel(player1, player2) {
-     this.state.lifepoints = {
-         0: 8000,
-         1: 8000
-     };
+     this.state.memory = 0
 
      player1.main.forEach((card, index) => {
          this.addCard('DECK', 0, index, card);
@@ -895,7 +889,7 @@ class Game {
              spectator: {}
          };
      output[slot] = {
-         duelAction: 'announcement',
+         gameAction: 'announcement',
          message
      };
      this.callback(output, this.stack.cards());
@@ -909,7 +903,7 @@ class Game {
   * @return {undefined}
   */
  changeLifepoints(player, amount) {
-     this.state.lifepoints[player] = this.state.lifepoints[player] + amount;
+     this.state.memory = player ? this.state.memory + amount : this.state.memory - amount;
      this.callback(this.generateView(), this.stack.cards());
  }
 
@@ -942,7 +936,7 @@ class Game {
      };
 
      output[slot] = {
-         duelAction: 'question',
+         gameAction: 'question',
          type: type,
          options: options,
          answerLength: answerLength,
