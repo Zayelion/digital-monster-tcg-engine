@@ -1,0 +1,8 @@
+{
+  "name": "digital-monster-tcg-engine",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "https://github.com/Zayelion/digital-monster-tcg-engine.git",
+  "author": "Jamezs Gladney <panthrowzay@gmail.com>",
+  "license": "MIT"
+}
