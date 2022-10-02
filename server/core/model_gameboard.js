@@ -15,7 +15,7 @@
  * @property {Number} id   passcode of the card
  * @property {Object} counters  counters on the card
  * @property {Number} overlayIndex  counters on the card
- * @property {String} position Faceup, Facedown, etc
+ * @property {String} position Unsuspended, Facedown, etc
  */
 
 /**
@@ -181,7 +181,9 @@ function Field() {
 
  function add(movelocation, player, index, code = 'unknown') {
      const uuid = uniqueIdenifier();
-     stack.push(new Pile(movelocation, player, index, uuid, code));
+     const card = new Pile(movelocation, player, index, uuid, code)
+     stack.push(card);
+     return card;
  }
 
  function remove(query) {
@@ -220,10 +222,10 @@ function Field() {
              if (primary.position === secondary.position) {
                  return 0;
              }
-             if (primary.position === 'FaceUp' && secondary.position !== 'FaceUp') {
+             if (primary.position === 'Unsuspended' && secondary.position !== 'Unsuspended') {
                  return 1;
              }
-             if (secondary.position === 'FaceUp' && primary.position !== 'FaceUp') {
+             if (secondary.position === 'Unsuspended' && primary.position !== 'Unsuspended') {
                  return -1;
              }
          });
@@ -257,12 +259,13 @@ function Field() {
      }
 
      if (pile.state.location === 'HAND') {
-         pile.state.position = 'FaceUp';
+         pile.state.position = 'Unsuspended';
      }
 
      reIndex(current.player, 'TRASH');
      reIndex(current.player, 'HAND');
      reIndex(current.player, 'EGG');
+     reIndex(current.player, 'BATTLEZONE');
      reIndex(current.player, 'EXCAVATED');
 
      cleanCounters();
@@ -394,7 +397,7 @@ function hideViewOfExtra(view, allowed) {
  view.forEach(function (card, index) {
      output[index] = {};
      Object.assign(output[index], card);
-     // if (card.position === 'FaceUpAttack') {
+     // if (card.position === 'UnsuspendedAttack') {
      //     output[index].id = (allowed) ? card.id : 0;
      // }
  });
@@ -413,7 +416,7 @@ function hideHand(view) {
  view.forEach(function (card, index) {
      output[index] = {};
      Object.assign(output[index], card);    
-         output[index].position = (card.isPublic) ? 'FaceUp' : 'FaceDown';
+         output[index].position = (card.isPublic) ? 'Unsuspended' : 'FaceDown';
      if (!card.isPublic) {
          output[index].id = 'unknown';
      }
@@ -423,7 +426,7 @@ function hideHand(view) {
 }
 
 
-class Game {
+class GameBoard {
 
  constructor(callback) {
      if (typeof callback !== 'function') {
@@ -700,7 +703,7 @@ class Game {
      return output;
  }
 
- ygoproUpdate() {
+ gameUpdate() {
      this.callback(this.generateView(), this.stack.cards());
  }
 
@@ -715,7 +718,7 @@ class Game {
   * @returns {undefined}            
   */
  makeNewCard(location, controller, sequence, position, code, index) {
-     this.stack.add({
+     const card = this.stack.add({
          player: controller,
          location,
          controller,
@@ -724,6 +727,8 @@ class Game {
          index
      });
      this.callback(this.generateView('newCard'), this.stack.cards());
+
+     return card;
  }
 
 
@@ -773,7 +778,7 @@ class Game {
              player,
              location: 'HAND',
              index: currenthand + i,
-             position: 'FaceUp',
+             position: 'Unsuspended',
              id: cards[i].id || topcard.id
          });
      }
@@ -796,7 +801,7 @@ class Game {
      var reveal = [];
      reference.forEach(function (card, index) {
          reveal.push(Object.assign({}, card));
-         reveal[index].position = 'FaceUp'; // make sure they can see the card and all data on it.
+         reveal[index].position = 'Unsuspended'; // make sure they can see the card and all data on it.
      });
      this.callback({
          p0: {
@@ -969,4 +974,4 @@ class Game {
 
 }
 
-module.exports = Game;
+module.exports = GameBoard;
