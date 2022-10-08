@@ -108,34 +108,58 @@ function getByOrigin(stack, uid) {
   });
 }
 
-class Pile {
-  state;
+export class Pile {
+  id: string;
+  uid: string;
+  player: PLAYER;
+  location: string;
+  index?: number;
+  position?: string;
+  counters?: any;
+  origin?: string;
+  effects?: [];
+  dp?: number;
+  currentDP?: number;
+  originalcontroller?: PLAYER;
+  overlayindex?: number;
+  list: Pile[];
+  pileuid?: string;
+  level?: LEVEL;
+  type?: TYPE[];
+  digivolutionCosts?: DigivolutionCost[];
+  attribute?: ATTRIBUTE;
+  blocked: boolean = false;
 
-  constructor(movelocation, player, index, uid, id) {
-    this.state = {
-      player: player,
-      location: movelocation,
-      index: index,
-      position: 'FaceDown',
-      counters: 0,
-      origin: uid,
-      list: [{ id, uid, list: [], originalcontroller: player, effects: [] }]
-    };
+  constructor(movelocation = 'DECK', player = 0, index = 0, uid = '', id = '') {
+    this.id = id;
+    this.uid = uid;
+    this.player = player;
+    this.location = movelocation;
+    this.index = index;
+    this.position = 'FaceDown';
+    this.counters = {};
+    this.origin = uid;
+    this.effects = [];
+    this.originalcontroller = player;
+
+    this.list = [this];
   }
 
   render() {
-    return this.state.list.reduce((output, card, overlayindex) => {
-      output.push(Object.assign({ overlayindex }, card, this.state));
+    return this.list.reduce((output, card, overlayindex) => {
+      output.push(Object.assign({ overlayindex } as Pile, card, this));
       return output;
     }, []);
   }
 
-  attach(card, sequence) {
-    this.state.list.splice(sequence, 0, card);
+  attach(card: Pile, sequence: number) {
+    card.pileuid = this.origin;
+    this.list.splice(sequence, 0, card);
   }
 
   detach(sequence) {
-    const card = this.state.list.splice(sequence, 1)[0];
+    const card = this.list.splice(sequence, 1)[0];
+    card.pileuid = undefined;
     return card;
   }
 
@@ -143,7 +167,7 @@ class Pile {
     if (!data) {
       return;
     }
-    Object.assign(this.state, data);
+    Object.assign(this, data);
   }
 }
 
@@ -170,9 +194,9 @@ class Field {
         this.lookup[code] ||
         this.stack.find((pile) => {
           return (
-            pile.state.player === query.player &&
-            pile.state.location === query.location &&
-            pile.state.index === query.index
+            pile.player === query.player &&
+            pile.location === query.location &&
+            pile.index === query.index
           );
         });
     return card;
@@ -193,39 +217,39 @@ class Field {
   cleanCounters() {
     const list = this.stack.filter((pile: Pile) => {
       return (
-        pile.state.location === 'DECK' ||
-        pile.state.location === 'HAND' ||
-        pile.state.location === 'EGG' ||
-        pile.state.location === 'TRASH' ||
-        pile.state.location === 'SECURITY'
+        pile.location === 'DECK' ||
+        pile.location === 'HAND' ||
+        pile.location === 'EGG' ||
+        pile.location === 'TRASH' ||
+        pile.location === 'SECURITY'
       );
     });
     list.forEach((pile) => {
-      pile.state.counters = {};
+      pile.counters = {};
     });
   }
 
   updateIndex() {
     this.stack.forEach((card: Pile) => {
-      const code = card.state.player + card.state.location + card.state.index;
-      this.lookup[code] = card.state.list.length ? card : undefined;
+      const code = card.player + card.location + card.index;
+      this.lookup[code] = card.list.length ? card : undefined;
     });
   }
 
   reIndex(player, location) {
     const zone = this.stack.filter((pile) => {
-      return pile.state.player === player && pile.state.location === location;
+      return pile.player === player && pile.location === location;
     });
 
     if (location === 'EGG') {
       zone.sort(function (primary, secondary) {
-        if (primary.state.position === secondary.state.position) {
+        if (primary.position === secondary.position) {
           return 0;
         }
-        if (primary.state.position === 'Unsuspended' && secondary.state.position !== 'Unsuspended') {
+        if (primary.position === 'Unsuspended' && secondary.position !== 'Unsuspended') {
           return 1;
         }
-        if (secondary.state.position === 'Unsuspended' && primary.state.position !== 'Unsuspended') {
+        if (secondary.position === 'Unsuspended' && primary.position !== 'Unsuspended') {
           return -1;
         }
         return 0;
@@ -235,7 +259,7 @@ class Field {
     zone.sort(sortByIndex);
 
     zone.forEach(function (pile, index) {
-      pile.state.index = index;
+      pile.index = index;
     });
 
     this.stack.sort(sortByIndex);
@@ -268,6 +292,8 @@ class Field {
     this.reIndex(current.player, 'EXCAVATED');
 
     this.cleanCounters();
+
+    return pile;
   }
 
   detach(previous, sequence, current) {
@@ -411,11 +437,11 @@ function hideHand(view) {
   return output;
 }
 
-class GameBoard {
+export class GameBoard {
   callback;
   answerListener;
   lastQuestion;
-  stack;
+  stack: Field;
   getCards;
   addCard;
   removeCard;
@@ -431,6 +457,7 @@ class GameBoard {
   field;
   info;
   decks;
+  memory = 0;
 
   constructor(callback) {
     if (typeof callback !== 'function') {
@@ -721,15 +748,7 @@ class GameBoard {
    * @returns {undefined}
    */
   makeNewCard(location, controller, sequence, position, code, index) {
-    const card = this.stack.add({
-      player: controller,
-      location,
-      controller,
-      position,
-      code,
-      index,
-      effects: []
-    });
+    const card = this.stack.add(location, controller, sequence, code);
     this.callback(this.generateView('newCard'), this.stack.cards());
 
     return card;
@@ -765,7 +784,7 @@ class GameBoard {
    * @param {Function} drawCallback   callback used by automatic
    * @returns {undefined}
    */
-  drawCard(player, numberOfCards, drawCallback) {
+  drawCard(player, numberOfCards) {
     const currenthand = filterlocation(filterPlayer(this.stack.cards(), player), 'HAND').length;
     let topcard;
     let deck;
@@ -785,15 +804,12 @@ class GameBoard {
           location: 'HAND',
           index: currenthand + i,
           position: 'Unsuspended',
-          id: cards[i].state.id || topcard.id
+          id: cards[i].id || topcard.id
         }
       );
     }
 
     this.callback(this.generateView(), this.stack.cards());
-    if (typeof drawCallback === 'function') {
-      drawCallback();
-    }
   }
 
   recover(player, numberOfCards) {
@@ -833,7 +849,7 @@ class GameBoard {
     const reveal: Pile[] = [];
     reference.forEach(function (card, index) {
       reveal.push(Object.assign({}, card));
-      reveal[index].state.position = 'Unsuspended'; // make sure they can see the card and all data on it.
+      reveal[index].position = 'Unsuspended'; // make sure they can see the card and all data on it.
     });
     this.callback(
       {
@@ -1016,5 +1032,3 @@ class GameBoard {
     );
   }
 }
-
-module.exports = GameBoard;

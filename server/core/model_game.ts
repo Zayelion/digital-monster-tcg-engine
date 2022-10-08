@@ -1,19 +1,39 @@
-const GameBoard = require('../model_gameboard');
+import { GameBoard, Pile } from './model_gameboard';
 
-const gameEvents = [];
+type GameEvent = {
+  action;
+  triggeredEffect: Function;
+  player: number;
+  cards;
+  target;
+};
 
-function raiseEvent(action, triggeredEffect,  player, cards, target) {
+const gameEvents: GameEvent[] = [];
+
+function raiseEvent(action, triggeredEffect, player, cards, target) {
   gameEvents.push({ action, triggeredEffect, player, cards, target });
+}
+
+async function actionCheck() {
+  while (gameEvents.length) {
+    await gameEvents.pop()?.triggeredEffect();
+  }
 }
 
 function getCanDigivolve(gameBoard) {
   const cards = gameBoard.getCards();
 }
 
-function getTriggerEffects(action, gameBoard, player, cards, targets) {
-  const cards = gameBoard.getCards();
+function getTriggerEffects(
+  action,
+  gameBoard: GameBoard,
+  player = 0,
+  cards: Pile[] = [],
+  targets: Pile[] = []
+) {
+  const allCards = gameBoard.getCards();
 
-  const effects = cards
+  const effects = allCards
     .map((card) => {
       return card.effects;
     })
@@ -28,7 +48,13 @@ function getTriggerEffects(action, gameBoard, player, cards, targets) {
     });
 }
 
-async function registerTrigger(action, gameBoard, player, cards, targets) {
+async function registerTrigger(
+  action,
+  gameBoard: GameBoard,
+  player,
+  cards: Pile[] = [],
+  targets: Pile[] = []
+) {
   const triggeredEffects = getTriggerEffects(action, gameBoard, player, cards, targets);
 
   triggeredEffects.map((triggeredEffect) => {
@@ -36,13 +62,10 @@ async function registerTrigger(action, gameBoard, player, cards, targets) {
     return triggeredEffect;
   });
 
-  while (gameEvents.length) {
-    const action = gameEvents.pop();
-    await action();
-  }
+  await actionCheck();
 }
 
-function unsuspendPhase(gameBoard, player) {
+async function unsuspendPhase(gameBoard: GameBoard, player) {
   const gameStack = gameBoard.getState();
 
   const unsuspended = gameStack.filter((card) => {
@@ -52,35 +75,42 @@ function unsuspendPhase(gameBoard, player) {
     }
   });
 
-  registerTrigger('ON_TURN_START', gameBoard, player, []);
+  await registerTrigger('ON_TURN_START', gameBoard, player, []);
+  await registerTrigger('ON_YOUR_TURN', gameBoard, player, []);
+  await registerTrigger('ON_OPPONENTS_TURN', gameBoard, player, []);
+  await registerTrigger('ON_BOTH_PLAYERS_TURN', gameBoard, player, []);
 
   return unsuspended;
 }
 
-function drawPhase(gameBoard, player) {
-  if (!generateViewCount(player).DECK) {
+function drawPhase(gameBoard: GameBoard, player) {
+  if (!gameBoard.generateViewCount(player).DECK) {
     return false;
   }
 
   if (gameBoard.state.turn) {
-    gameBoard.drawCard(player, numberOfCards, cards);
+    gameBoard.drawCard(player, 1);
   }
 
   return true;
 }
 
-function endPhase(gameBoard, player) {
-  actionCheck(gameBoard, player);
+async function endPhase(gameBoard, player) {
+  await actionCheck();
   gameBoard.nextTurn();
 }
 
-function suggestMainAction(gameBoard, player) {
-  const field = generateSinglePlayerView(player);
-  const attack = field.battlezone; // filter digimon that are untapped;
-  const tamer = getTriggerEffects('PLAY_TAMER', gameBoard, player)
-  const option = getTriggerEffects('PLAY_OPTION', gameBoard, player)
-  const digivolve = getTriggerEffects('CAN_DIGIVOLVE', gameBoard, player)
-  const play = field.hand // filter for digimon
+function attackResolve(gameBoard, player, digimon, target: Pile | 'player') {
+
+}
+
+function suggestMainAction(gameBoard: GameBoard, player) {
+  const field = gameBoard.generateSinglePlayerView(player);
+  const attack = field.BATTLEZONE; // filter digimon that are untapped;
+  const tamer = getTriggerEffects('PLAY_TAMER', gameBoard, player);
+  const option = getTriggerEffects('PLAY_OPTION', gameBoard, player);
+  const digivolve = getTriggerEffects('CAN_DIGIVOLVE', gameBoard, player);
+  const play = field.HAND; // filter for digimon
 
   const options = {
     play,
@@ -92,42 +122,45 @@ function suggestMainAction(gameBoard, player) {
   };
 
   gameBoard.question(player, 'main', options, 1, async (answer) => {
-    const field = generateSinglePlayerView(player);
+    const field = gameBoard.generateSinglePlayerView(player);
 
-    let digimon;
-    let tamer;
-    let option;
+    let digimon: Pile;
+    let tamer: Pile;
+    let option: Pile;
+    let previous: Pile;
 
     switch (answer.action) {
       case 'play':
-        digimon = field.hand[answer.index];
-        gameStack.setState({ ...digimon, location: 'BATTLEZONE', position: 'Unsuspended' });
-        await registerTrigger(phase, gameBoard, player, [digimon]);
+        digimon = field.HAND[answer.index];
+        gameBoard.setState({ ...digimon, location: 'BATTLEZONE', position: 'Unsuspended' });
+        await registerTrigger('ON_PLAY', gameBoard, player, [digimon]);
         break;
 
       case 'digivolve':
-        digimon = field.hand[answer.index];
-        previous = field.battlezone[answer.target];
-        gameStack.evolve({ ...digimon, previous });
-        await registerTrigger(answer.action, gameBoard, player, [digimon, previous]);
+        digimon = field.HAND[answer.index];
+        previous = field.BATTLEZONE[answer.target];
+        gameBoard.evolve({ ...digimon, previous });
+        gameBoard.drawCard(player, 1)
+        await registerTrigger('ON_DIGIVOLVE', gameBoard, player, [digimon, previous]);
         break;
 
       case 'tamer':
-        tamer = field.hand[answer.index];
-        gameStack.setState({ ...tamer, location: 'BATTLEZONE' });
-        await registerTrigger(answer.action, gameBoard, player, [tamer]);
+        tamer = field.HAND[answer.index];
+        gameBoard.setState({ ...tamer, location: 'BATTLEZONE' });
+        await registerTrigger('ON_PLAY', gameBoard, player, [tamer]);
         break;
 
       case 'option':
-        option = field.hand[answer.index];
-        gameStack.setState({ ...option, location: 'BATTLEZONE' });
-         await registerTrigger(answer.action, gameBoard, player, [option]);
+        option = field.HAND[answer.index];
+        gameBoard.setState({ ...option, location: 'BATTLEZONE' });
+        await registerTrigger('ON_PLAY', gameBoard, player, [option]);
         break;
 
       case 'attack':
-        digimon = field.battlezone[answer.index];
-        gameStack.setState({ ...digimon, location: 'BATTLEZONE', position: 'Suspended' });
-        await registerTrigger(answer.action, gameBoard, player, [digimon], answer.target);
+        digimon = field.BATTLEZONE[answer.index];
+        gameBoard.setState({ ...digimon, location: 'BATTLEZONE', position: 'Suspended' });
+        await registerTrigger('ON_ATTACKING', gameBoard, player, [digimon], answer.target);
+        attackResolve(gameBoard, player, digimon, answer.target)
         break;
 
       case 'next':
@@ -137,10 +170,10 @@ function suggestMainAction(gameBoard, player) {
   });
 }
 
-function suggestBreedingAction(gameBoard, player) {
-  const field = generateSinglePlayerView(player);
-  const hatch = !field.breedingzone.length;
-  const move = hatch ? false : field.breedingzone[0][field.breedingzone[0].length - 1].level > 2;
+function suggestBreedingAction(gameBoard: GameBoard, player) {
+  const field = gameBoard.generateSinglePlayerView(player);
+  const hatch = !field.BREEDINGZONE.length;
+  const move = hatch ? false : field.BREEDINGZONE[0][field.BREEDINGZONE[0].length - 1].level > 2;
 
   const options = {
     hatch,
@@ -150,43 +183,39 @@ function suggestBreedingAction(gameBoard, player) {
 
   return new Promise((resolve, reject) => {
     gameBoard.question(player, 'breeding', options, 1, (answer) => {
-      const field = generateSinglePlayerView(player);
+      const field = gameBoard.generateSinglePlayerView(player);
       switch (answer) {
         case 'hatch':
           {
-            const digimon = field.egg[field.egg.length - 0];
-            gameStack.setState({ ...digimon, location: 'BREEDINGZONE', position: 'Unsuspended' });
+            const digimon = field.EGG[field.EGG.length - 0];
+            gameBoard.setState({ ...digimon, location: 'BREEDINGZONE', position: 'Unsuspended' });
           }
           break;
         case 'move':
           {
-            const digimon = field.breedingzone[0];
-            gameStack.setState({ ...digimon, location: 'BATTLEZONE' });
+            const digimon = field.BREEDINGZONE[0];
+            gameBoard.setState({ ...digimon, location: 'BATTLEZONE' });
           }
           break;
         case 'nothing':
           break;
       }
-      resolve();
+      resolve(answer);
     });
   });
 }
 
-function suggestAction() {
-  suggestBreedingAction(phase, gameBoard, player);
-}
-
-async function turn(player) {
+async function turn(gameBoard: GameBoard, player) {
   let gameLoss;
   let outOfMemory = false;
 
-  unspendedCards = unsuspendPhase(gameBoard, player);
-  nextPhase(1);
+  const unspendedCards = unsuspendPhase(gameBoard, player);
+  gameBoard.nextPhase(1);
   gameLoss = !drawPhase(gameBoard, player);
   if (gameLoss) {
     return gameLoss;
   }
-  nextPhase(2);
+  gameBoard.nextPhase(2);
   gameLoss = await suggestBreedingAction(gameBoard, player);
   gameBoard.nextPhase(3);
 
@@ -201,14 +230,10 @@ async function turn(player) {
   endPhase(gameBoard, player);
 
   const nextPlayer = 0 ? 1 : 0;
-  turn(nextPlayer);
+  turn(gameBoard, nextPlayer);
 }
 
-function suggestAction() {
-  const attack = getAttackers();
-}
-
-function Game(decks, playerInterface) {
+export function Game(decks, playerInterface: Function) {
   // decide who goes first
 
   const gameBoard = new GameBoard(playerInterface);
@@ -226,5 +251,5 @@ function Game(decks, playerInterface) {
 
   // start phases
 
-  turn(0);
+  turn(gameBoard, 0);
 }

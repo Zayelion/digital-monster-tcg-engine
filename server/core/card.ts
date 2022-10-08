@@ -9,6 +9,7 @@ const sample  = {
         {
             color: 'red',
             cost: 13,
+            level : 2,
             digimon: []
         },
         {
