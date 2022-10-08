@@ -3,6 +3,19 @@ declare enum PLAYER {
   TWO = 1
 }
 
+declare enum LOCATION {
+  'DECK',
+  'HAND',
+  'TRASH',
+  'EGG',
+  'SECURITY',
+  'BREEDINGZONE',
+  'BATTLEZONE',
+  'EXCAVATED',
+  'INMATERIAL',
+  'ONFIELD'
+}
+
 declare enum LEVEL {
   BABY = 2,
   ROOKIE = 3,

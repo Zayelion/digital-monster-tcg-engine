@@ -16,35 +16,37 @@ Evolution Base Effects:
 import { Engine } from "../server/core/engine_api";
 import { GameBoard, Pile } from "../server/core/model_gameboard";
 
-function blocker(self: Pile, engine: Engine) {
+function blocker(card: Pile, engine: Engine) {
   return {
     type: "BLOCKER",
     trigger: () => {
       return true
     },
     effect: (target) => {
-      engine.blocker(self, target);
+      engine.blocker(card, target);
     },
   };
 }
 
-function whenAttacking(self: Pile, engine: Engine) {
+function whenAttacking(card: Pile, engine: Engine) {
   return {
     type: "WHEN_ATTACKING",
     trigger: () => {
       return true
     },
     effect: () => {
-      engine.memory(self.player, -2)
+      engine.memory(card.player, -2)
     },
   };
 }
 
-function register(self: Pile, engine: Engine) {
-  self.level = LEVEL.CHAMPION;
-  self.id = "ST1-06";
-  self.type = [TYPE.Dragon];
-  self.digivolutionCosts = [
+function register(card: Pile, engine: Engine) {
+  card.playCost = 5;
+  card.level = LEVEL.CHAMPION;
+  card.id = "ST1-06";
+  card.dp = 6000;
+  card.type = [TYPE.Dragon];
+  card.digivolutionCosts = [
     {
       color: COLOR.RED,
       level: 3,
@@ -52,9 +54,9 @@ function register(self: Pile, engine: Engine) {
       digimon: [],
     },
   ];
-  return [blocker(self, engine), whenAttacking(self, engine)];
+  return [blocker(card, engine), whenAttacking(card, engine)];
 }
 
-module.exports = {
+export default {
   register,
 };

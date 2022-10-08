@@ -1,6 +1,6 @@
 /**
 Agumon
-DP2000
+DP 2000
 Play Cost	3
 Evolution Cost 0 from Lv.2
 Level 3		
@@ -15,24 +15,26 @@ Evolution Base Effects:
 
 import { GameBoard, Pile } from "../server/core/model_gameboard";
 
-function duringYourTurn(self: Pile) {
+function duringYourTurn(card: Pile) {
   return {
     type: "YOUR_TURN",
     trigger: () => {
       return true
     },
     effect: () => {
-      const value = self.currentDP || 0;
-      self.currentDP = value + 1000;
+      const value = card.currentDP || 0;
+      card.currentDP = value + 1000;
     },
   };
 }
 
-function register(self: Pile) {
-  self.level = LEVEL.ROOKIE;
-  self.id = "ST1-03";
-  self.type = [TYPE.Reptile];
-  self.digivolutionCosts = [
+function register(card: Pile) {
+  card.playCost = 3;
+  card.level = LEVEL.ROOKIE;
+  card.id = "ST1-03";
+  card.dp = 2000;
+  card.type = [TYPE.Reptile];
+  card.digivolutionCosts = [
     {
       color: COLOR.RED,
       level: 2,
@@ -40,9 +42,9 @@ function register(self: Pile) {
       digimon: [],
     },
   ];
-  return [duringYourTurn(self)];
+  return [duringYourTurn(card)];
 }
 
-module.exports = {
+export default {
   register,
 };

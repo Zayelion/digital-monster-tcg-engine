@@ -8,13 +8,19 @@ export type CostReduction = {
 
 export type SecurityAugmentation = {
   id: string;
-  effect: Function;
+  effect: (card: Pile, cost: number) => number;
+};
+
+export type TurnEndAction = {
+  id: string;
+  effect: () => Promise<void>;
 };
 
 export class Engine {
   gameboard: GameBoard;
   costReductions: CostReduction[] = [];
   securityAugmentations: SecurityAugmentation[] = [];
+  turnEndActions: TurnEndAction[] = [];
   registerTrigger: Function;
 
   constructor(gameboard: GameBoard, registerTrigger: Function) {
@@ -46,33 +52,33 @@ export class Engine {
     });
   }
 
-  getSecurityAugmentation(card) {
-    return card.state.digivolutionCosts.map((augmentation) => {
-      const count = this.costReductions.reduce((cost, augmentation) => {
-        return augmentation.effect(card, cost);
-      }, 1);
-      return count;
-    });
+  getSecurityAugmentation(card): number {
+    const count = this.securityAugmentations.reduce((cost, augmentation) => {
+      return augmentation.effect(card, cost);
+    }, 1);
+    return count;
   }
 
-  registerSecurityAugmentation(id, effect) {
+  registerSecurityAugmentation(id, effect): void {
     this.securityAugmentations.push({ id, effect });
   }
 
-  deregisterSecurityAugmentation(id) {
+  deregisterSecurityAugmentation(id): void {
     this.securityAugmentations = this.securityAugmentations.filter((reduction) => {
       return reduction.id !== id;
     });
   }
 
-  draw(player, amount) {
+  draw(player, amount): void {
     this.gameboard.drawCard(player, amount);
   }
 
-  getOwner(card: Pile) {
-    return this.gameboard.getCards().filter((card) => {
-      return card.state.pileuid === card.state.uid;
-    });
+  getOwner(card: Pile): Pile {
+    return (
+      this.gameboard.getCards().filter((card) => {
+        return card.state.pileuid === card.state.uid;
+      }) || card
+    );
   }
 
   memory(player, amount) {
@@ -162,9 +168,10 @@ export class Engine {
       card.blocked = false;
     }
     this.securityCheck(card);
+    await this.registerTrigger('AFTER_ATTACK', this.gameboard, card.player, [card]);
   }
 
-  blitz(card) {
+  blitz(card: Pile): Promise<boolean> {
     return new Promise((resolve) => {
       this.gameboard.question(card.player, 'blitz', [card], 1, async (answer) => {
         if (answer.ok) {
@@ -174,5 +181,20 @@ export class Engine {
         resolve(true);
       });
     });
+  }
+
+  async dpChange(card: Pile, amount: number) {
+    card.currentDP = (card.currentDP || 0) + amount;
+    if (card.location === 'battlezone' && card.currentDP < 1) {
+      await this.registerTrigger('ON_DELETION', this.gameboard, card.player, [card]);
+    }
+  }
+
+  registerTurnEndAction(id, action) {
+    this.costReductions.push({ id, effect: action });
+  }
+
+  async resolveTurnEndActions() {
+    await Promise.all(this.turnEndActions.map((action) => action.effect()));
   }
 }

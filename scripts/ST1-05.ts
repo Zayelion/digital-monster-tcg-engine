@@ -16,12 +16,14 @@ Evolution Base Effects:
 
 import { GameBoard, Pile } from "../server/core/model_gameboard";
 
-function register(self: Pile) {
-  self.level = LEVEL.CHAMPION;
-  self.id = "ST1-05";
-  self.type = [TYPE["Giant Bird"]];
-  self.attribute = ATTRIBUTE.Vaccine;
-  self.digivolutionCosts = [
+function register(card: Pile) {
+  card.playCost = 4;
+  card.level = LEVEL.CHAMPION;
+  card.id = "ST1-05";
+  card.dp = 5000;
+  card.type = [TYPE["Giant Bird"]];
+  card.attribute = ATTRIBUTE.Vaccine;
+  card.digivolutionCosts = [
     {
       color: COLOR.RED,
       level: 3,
@@ -32,6 +34,6 @@ function register(self: Pile) {
   return [];
 }
 
-module.exports = {
+export default {
   register,
 };

@@ -13,28 +13,28 @@ Evolution Base Effects:
 import { Engine } from "../server/core/engine_api";
 import { GameBoard, Pile } from "./../server/core/model_gameboard";
 
-function duringYourTurn(self: Pile, engine: Engine) {
+function duringYourTurn(card: Pile, engine: Engine) {
   return {
     type: "YOUR_TURN",
     trigger: ({ cards, target }) => {
-      const digimon = engine.getOwner(self);
-      return digimon.stack.lgenth > 4
+      const digimon = engine.getOwner(card);
+      return digimon.stack.lgenth > 4;
     },
     effect: () => {
-      const value = self.currentDP || 0;
-      self.currentDP = value + 1000;
+      const value = card.currentDP || 0;
+      card.currentDP = value + 1000;
     },
   };
 }
 
-function register(self: Pile, engine: Engine) {
-  self.level = LEVEL.BABY;
-  self.id = "ST1-01";
-  self.type = [TYPE.Lesser];
-  self.digivolutionCosts = []
-  return [duringYourTurn(self, engine)];
+function register(card: Pile, engine: Engine) {
+  card.level = LEVEL.BABY;
+  card.id = "ST1-01";
+  card.type = [TYPE.Lesser];
+  card.digivolutionCosts = [];
+  return [duringYourTurn(card, engine)];
 }
 
-module.exports = {
+export default {
   register,
 };

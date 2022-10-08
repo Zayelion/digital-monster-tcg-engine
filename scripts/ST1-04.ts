@@ -16,12 +16,14 @@ Evolution Base Effects:
 
 import { GameBoard, Pile } from "../server/core/model_gameboard";
 
-function register(self: Pile) {
-  self.level = LEVEL.ROOKIE;
-  self.id = "ST1-04";
-  self.type = [TYPE.Dragon];
-  self.attribute = ATTRIBUTE.Data
-  self.digivolutionCosts = [
+function register(card: Pile) {
+  card.playCost = 2;
+  card.level = LEVEL.ROOKIE;
+  card.id = "ST1-04";
+  card.dp = 4000;
+  card.type = [TYPE.Dragon];
+  card.attribute = ATTRIBUTE.Data
+  card.digivolutionCosts = [
     {
       color: COLOR.RED,
       level: 2,
@@ -32,6 +34,6 @@ function register(self: Pile) {
   return [];
 }
 
-module.exports = {
+export default {
   register,
 };

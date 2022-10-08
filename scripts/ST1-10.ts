@@ -1,12 +1,12 @@
 /**
 
-Piyomon
-DP 3000
-Play Cost 2
+Hououmon
+DP 12000
+Play Cost 10
 Evolution Cost	2		0 from Lv.2
-Lv.3		
-ST1-02	
-Level: Child | Attribute: Vaccine | Type: Chick
+Lv.6		
+ST1-10	
+Level: Mega | Attribute: Vaccine | Type: Chick
 Effects:
 -
 
@@ -17,17 +17,17 @@ Evolution Base Effects:
 import { GameBoard, Pile } from "../server/core/model_gameboard";
 
 function register(card: Pile) {
-  card.playCost = 2;
-  card.level = LEVEL.ROOKIE;
+  card.playCost = 10;
+  card.level = LEVEL.MEGA;
   card.id = "ST1-02";
-  card.dp = 3000;
-  card.type = [TYPE.Chick];
+  card.dp = 12000;
+  card.type = [TYPE["Holy Beast"]];
   card.attribute = ATTRIBUTE.Vaccine;
   card.digivolutionCosts = [
     {
       color: COLOR.RED,
-      level: 2,
-      cost: 0,
+      cost: 2,
+      level: 5,
       digimon: [],
     },
   ];

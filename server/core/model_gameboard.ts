@@ -129,6 +129,7 @@ export class Pile {
   digivolutionCosts?: DigivolutionCost[];
   attribute?: ATTRIBUTE;
   blocked: boolean = false;
+  playCost: number = 0;
 
   constructor(movelocation = 'DECK', player = 0, index = 0, uid = '', id = '') {
     this.id = id;
@@ -737,6 +738,7 @@ export class GameBoard {
     this.callback(this.generateView(), this.stack.cards());
   }
 
+
   /**
    * Creates a new card outside of initial start
    * @param {String} location     zone the card can be found in.
@@ -879,8 +881,8 @@ export class GameBoard {
     );
   }
 
-  getField(view) {
-    return this.generateView('start')[view];
+  getField(player) {
+    return this.generateView('start')['p' + player].field;
   }
 
   /**
