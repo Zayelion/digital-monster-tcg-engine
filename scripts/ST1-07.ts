@@ -35,6 +35,7 @@ function duringYourTurn(card: Pile, engine: Engine) {
 
 function register(card: Pile, engine: Engine) {
   card.playCost = 5;
+  card.color = [COLOR.RED];
   card.level = LEVEL.CHAMPION;
   card.id = "ST1-07";
   card.dp = 4000;

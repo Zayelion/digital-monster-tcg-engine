@@ -112,7 +112,7 @@ export class Pile {
   id: string;
   uid: string;
   player: PLAYER;
-  location: string;
+  location: LOCATION;
   index?: number;
   position?: string;
   counters?: any;
@@ -130,8 +130,9 @@ export class Pile {
   attribute?: ATTRIBUTE;
   blocked: boolean = false;
   playCost: number = 0;
+  color: COLOR[] = COLOR.COLORLESS;
 
-  constructor(movelocation = 'DECK', player = 0, index = 0, uid = '', id = '') {
+  constructor(movelocation: LOCATION, player = 0, index = 0, uid = '', id = '') {
     this.id = id;
     this.uid = uid;
     this.player = player;
@@ -737,7 +738,6 @@ export class GameBoard {
   gameUpdate() {
     this.callback(this.generateView(), this.stack.cards());
   }
-
 
   /**
    * Creates a new card outside of initial start

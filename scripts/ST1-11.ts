@@ -36,7 +36,8 @@ function duringYourTurn(card: Pile, engine: Engine) {
 
 function register(card: Pile, engine: Engine) {
   card.playCost = 12;
-  card.level = LEVEL.CHAMPION;
+  card.color = [COLOR.RED];
+  card.level = LEVEL.MEGA;
   card.id = "ST1-11";
   card.dp = 12000;
   card.type = [TYPE.Dragonkin];

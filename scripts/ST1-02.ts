@@ -17,6 +17,7 @@ Evolution Base Effects:
 import { GameBoard, Pile } from "../server/core/model_gameboard";
 
 function register(card: Pile) {
+  card.color = [COLOR.RED];
   card.playCost = 2;
   card.level = LEVEL.ROOKIE;
   card.id = "ST1-02";

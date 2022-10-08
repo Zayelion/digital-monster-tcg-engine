@@ -18,6 +18,7 @@ import { GameBoard, Pile } from "../server/core/model_gameboard";
 
 function register(card: Pile) {
   card.playCost = 10;
+  card.color = [COLOR.RED];
   card.level = LEVEL.MEGA;
   card.id = "ST1-02";
   card.dp = 12000;

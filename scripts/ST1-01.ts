@@ -28,6 +28,7 @@ function duringYourTurn(card: Pile, engine: Engine) {
 }
 
 function register(card: Pile, engine: Engine) {
+  card.color = [COLOR.RED];
   card.level = LEVEL.BABY;
   card.id = "ST1-01";
   card.type = [TYPE.Lesser];

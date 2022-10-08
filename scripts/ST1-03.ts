@@ -30,6 +30,7 @@ function duringYourTurn(card: Pile) {
 
 function register(card: Pile) {
   card.playCost = 3;
+  card.color = [COLOR.RED];
   card.level = LEVEL.ROOKIE;
   card.id = "ST1-03";
   card.dp = 2000;

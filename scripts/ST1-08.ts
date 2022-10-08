@@ -34,8 +34,8 @@ function duringYourTurn(card: Pile, engine: Engine) {
           1,
           async (digimon) => {
             await engine.dpChange(digimon, 3000);
-            engine.registerTurnEndAction(card.uid, () => {
-              if (digimon.location === "BATTLEZONE") {
+            engine.registerTurnEndAction(card.uid, async () => {
+              if (digimon.location === LOCATION.BATTLEZONE) {
                 await engine.dpChange(digimon, -3000);
               }
             });
@@ -48,6 +48,7 @@ function duringYourTurn(card: Pile, engine: Engine) {
 
 function register(card: Pile, engine: Engine) {
   card.playCost = 6;
+  card.color = [COLOR.RED];
   card.level = LEVEL.ULTIMATE;
   card.id = "ST1-08";
   card.dp = 4000;

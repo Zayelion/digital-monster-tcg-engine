@@ -67,7 +67,7 @@ async function unsuspendPhase(gameBoard: GameBoard, player) {
   const gameStack = gameBoard.getState();
 
   const unsuspended = gameStack.filter((card) => {
-    if (card.player === player && card.location === 'BATTLEZONE') {
+    if (card.player === player && card.location === LOCATION.BATTLEZONE) {
       gameStack.setState({ ...card, position: 'Unsuspended' });
       return card;
     }
@@ -94,13 +94,13 @@ function drawPhase(gameBoard: GameBoard, player) {
 }
 
 async function endPhase(gameBoard, engine: Engine, player: PLAYER) {
-  await engine.resolveTurnEndActions()
+  await engine.resolveTurnEndActions();
   gameBoard.nextTurn();
 }
 
 function attackResolve(gameBoard, player, digimon, target: Pile | 'player') {}
 
-function suggestMainAction(gameBoard: GameBoard, engine,  player) {
+function suggestMainAction(gameBoard: GameBoard, engine, player) {
   const field = gameBoard.generateSinglePlayerView(player);
   const attack = field.BATTLEZONE; // filter digimon that are untapped;
   const tamer = getTriggerEffects('PLAY_TAMER', gameBoard, player);
@@ -128,6 +128,7 @@ function suggestMainAction(gameBoard: GameBoard, engine,  player) {
     switch (answer.action) {
       case 'play':
         digimon = field.HAND[answer.index];
+        engine.memory(player, digimon.playCost);
         gameBoard.setState({ ...digimon, location: 'BATTLEZONE', position: 'Unsuspended' });
         await registerTrigger('ON_PLAY', gameBoard, player, [digimon]);
         break;
@@ -135,6 +136,8 @@ function suggestMainAction(gameBoard: GameBoard, engine,  player) {
       case 'digivolve':
         digimon = field.HAND[answer.index];
         previous = field.BATTLEZONE[answer.target];
+        let digivolutionCosts = digimon?.digivolutionCosts || [];
+        engine.memory(player, digivolutionCosts[answer.digivolutionCost].cost);
         gameBoard.evolve({ ...digimon, previous });
         gameBoard.drawCard(player, 1);
         await registerTrigger('WHEN_DIGIVOLVING', gameBoard, player, [digimon, previous]);
@@ -156,7 +159,7 @@ function suggestMainAction(gameBoard: GameBoard, engine,  player) {
         digimon = field.BATTLEZONE[answer.index];
         gameBoard.setState({ ...digimon, location: 'BATTLEZONE', position: 'Suspended' });
         await registerTrigger('ON_ATTACKING', gameBoard, player, [digimon], answer.target);
-        engine.declareBattle(digimon)
+        engine.declareBattle(digimon);
         break;
 
       case 'next':

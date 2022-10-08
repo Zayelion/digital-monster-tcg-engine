@@ -11,6 +11,14 @@ export function isThisDigimon(engine: Engine, target: Pile, cards: Pile[]) {
   return isTarget && digimon.list.length > 1;
 }
 
+export function isInPlay(target: Pile) {
+  return target.location === LOCATION.BATTLEZONE
+}
+
+export function isThisTamer(engine: Engine, target: Pile, cards: Pile[]) {
+  return isThisDigimon(engine, target, cards);
+}
+
 export function getYourDigimon(engine: Engine, target: Pile): Pile[] {
   const battlezone = engine.gameboard.getField(target.player).BATTLEZONE;
   const options = battlezone.filter((battler) => {
@@ -19,5 +27,3 @@ export function getYourDigimon(engine: Engine, target: Pile): Pile[] {
 
   return options;
 }
-
-

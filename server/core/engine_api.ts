@@ -6,7 +6,12 @@ export type CostReduction = {
   effect: Function;
 };
 
-export type SecurityAugmentation = {
+export type SecurityCheckAugmentation = {
+  id: string;
+  effect: (card: Pile, cost: number) => number;
+};
+
+export type SecurityDPAugmentation = {
   id: string;
   effect: (card: Pile, cost: number) => number;
 };
@@ -19,7 +24,8 @@ export type TurnEndAction = {
 export class Engine {
   gameboard: GameBoard;
   costReductions: CostReduction[] = [];
-  securityAugmentations: SecurityAugmentation[] = [];
+  securityCheckAugmentations: SecurityCheckAugmentation[] = [];
+  securityDPAugmentations: SecurityDPAugmentation[] = [];
   turnEndActions: TurnEndAction[] = [];
   registerTrigger: Function;
 
@@ -52,19 +58,39 @@ export class Engine {
     });
   }
 
-  getSecurityAugmentation(card): number {
-    const count = this.securityAugmentations.reduce((cost, augmentation) => {
+  getSecurityCheckAugmentation(card): number {
+    const count = this.securityCheckAugmentations.reduce((cost, augmentation) => {
       return augmentation.effect(card, cost);
     }, 1);
     return count;
   }
 
-  registerSecurityAugmentation(id, effect): void {
-    this.securityAugmentations.push({ id, effect });
+  registerSecurityCheckAugmentation(id, effect): void {
+    this.securityCheckAugmentations.push({ id, effect });
   }
 
-  deregisterSecurityAugmentation(id): void {
-    this.securityAugmentations = this.securityAugmentations.filter((reduction) => {
+  deregisterSecurityCheckAugmentation(id): void {
+    this.securityCheckAugmentations = this.securityCheckAugmentations.filter((reduction) => {
+      return reduction.id !== id;
+    });
+  }
+
+  getSecurityDPAugmentation(card): number {
+    if (!card.currentDP) {
+      return 0;
+    }
+    const dp = this.securityDPAugmentations.reduce((dp, augmentation) => {
+      return augmentation.effect(card, dp);
+    }, card.dp);
+    return dp;
+  }
+
+  registerSecurityDPAugmentation(id, effect): void {
+    this.securityDPAugmentations.push({ id, effect });
+  }
+
+  deregisterSecurityDPAugmentation(id): void {
+    this.securityDPAugmentations = this.securityDPAugmentations.filter((reduction) => {
       return reduction.id !== id;
     });
   }
@@ -92,7 +118,7 @@ export class Engine {
 
   async securityCheck(card) {
     const attackedPlayer = card.player === PLAYER.ONE ? PLAYER.TWO : PLAYER.ONE;
-    const augmentation = this.getSecurityAugmentation(card);
+    const augmentation = this.getSecurityCheckAugmentation(card);
     const count = augmentation > 0 ? augmentation : 0;
 
     if (!count) {
@@ -112,14 +138,17 @@ export class Engine {
       });
 
       await this.registerTrigger(
-        'ON_SECURITY_CHECK',
+        'SECURITY',
         this.gameboard,
         card.player,
         [topCardOfSecurityStack],
         [card]
       );
 
-      const defeated = card.jamming && (card?.currentDP || 0) < (topCardOfSecurityStack.currentDP || 0);
+      const attackerDP = this.getSecurityDPAugmentation(card);
+      const securityDP = this.getSecurityDPAugmentation(topCardOfSecurityStack);
+
+      const defeated = card.jamming && attackerDP < securityDP;
       this.gameboard.moveCard({ ...topCardOfSecurityStack, location: 'trash' });
 
       if (defeated) {
@@ -185,7 +214,7 @@ export class Engine {
 
   async dpChange(card: Pile, amount: number) {
     card.currentDP = (card.currentDP || 0) + amount;
-    if (card.location === 'battlezone' && card.currentDP < 1) {
+    if (card.location === LOCATION.BATTLEZONE && card.currentDP < 1) {
       await this.registerTrigger('ON_DELETION', this.gameboard, card.player, [card]);
     }
   }
