@@ -24,7 +24,7 @@ function duringYourTurn(card: Pile, engine: Engine) {
 
       const registration = options.map(async(digimon) => {
         await engine.dpChange(digimon, 1000);
-        engine.registerTurnEndAction(card.uid, async () => {
+        engine.atEndOfYourTurn(card, async () => {
           if (digimon.location === LOCATION.BATTLEZONE) {
             await engine.dpChange(digimon, -1000);
           }
@@ -53,14 +53,6 @@ function register(card: Pile, engine: Engine) {
   card.color = [COLOR.RED];
   card.id = "ST1-12";
 
-  card.digivolutionCosts = [
-    {
-      color: COLOR.RED,
-      level: 3,
-      cost: 4,
-      digimon: [],
-    },
-  ];
   return [duringYourTurn(card, engine), security(card, engine)];
 }
 

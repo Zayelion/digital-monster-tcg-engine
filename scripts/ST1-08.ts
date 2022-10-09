@@ -34,7 +34,7 @@ function duringYourTurn(card: Pile, engine: Engine) {
           1,
           async (digimon) => {
             await engine.dpChange(digimon, 3000);
-            engine.registerTurnEndAction(card.uid, async () => {
+            engine.atEndOfYourTurn(card.uid, async () => {
               if (digimon.location === LOCATION.BATTLEZONE) {
                 await engine.dpChange(digimon, -3000);
               }

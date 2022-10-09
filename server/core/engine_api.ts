@@ -18,6 +18,7 @@ export type SecurityDPAugmentation = {
 
 export type TurnEndAction = {
   id: string;
+  player: PLAYER;
   effect: () => Promise<void>;
 };
 
@@ -219,11 +220,51 @@ export class Engine {
     }
   }
 
-  registerTurnEndAction(id, action) {
-    this.costReductions.push({ id, effect: action });
+  registerTurnEndAction(id, player, action) {
+    this.turnEndActions.push({ id, player, effect: action });
   }
 
-  async resolveTurnEndActions() {
+  atEndOfYourTurn(card, callback) {
+    this.registerTurnEndAction(card.uid, card.player, async () => {
+      callback();
+    });
+  }
+
+  atEndOfYourOpponentsTurn(card, callback) {
+    const opponent = card.player ? PLAYER.TWO : PLAYER.ONE;
+    this.registerTurnEndAction(card.uid, opponent, async () => {
+      await callback();
+    });
+  }
+
+  atEndOfYourNextTurn(card, callback) {
+    const opponent = card.player ? PLAYER.TWO : PLAYER.ONE;
+    this.registerTurnEndAction(card.uid, opponent, async () => {
+      this.registerTurnEndAction(card.uid, card.player, async () => {
+        await callback();
+      });
+    });
+  }
+
+  atEndOfYourOpponentsNextTurn(card, callback) {
+    const opponent = card.player ? PLAYER.TWO : PLAYER.ONE;
+    this.registerTurnEndAction(card.uid, opponent, async () => {
+      this.registerTurnEndAction(card.uid, card.player, async () => {
+        this.registerTurnEndAction(card.uid, opponent, async () => {
+          await callback();
+        });
+      });
+    });
+  }
+
+  async resolveTurnEndActions(player) {
+    const needResolving = this.turnEndActions.filter((action) => {
+      return action.player === player;
+    });
+    const leftOver = this.turnEndActions.filter((action) => {
+      return action.player !== player;
+    });
     await Promise.all(this.turnEndActions.map((action) => action.effect()));
+    this.turnEndActions = leftOver;
   }
 }

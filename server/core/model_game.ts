@@ -94,7 +94,7 @@ function drawPhase(gameBoard: GameBoard, player) {
 }
 
 async function endPhase(gameBoard, engine: Engine, player: PLAYER) {
-  await engine.resolveTurnEndActions();
+  await engine.resolveTurnEndActions(player);
   gameBoard.nextTurn();
 }
 

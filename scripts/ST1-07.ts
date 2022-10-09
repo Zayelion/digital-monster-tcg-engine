@@ -22,7 +22,7 @@ function duringYourTurn(card: Pile, engine: Engine) {
       return isThisDigimon(engine, card, cards);
     },
     effect: () => {
-      engine.registerSecurityAugmentation(card.uid, (attacker, count) => {
+      engine.registerSecurityCheckAugmentation(card.uid, (attacker, count) => {
         const digimon = engine.getOwner(card);
         if (digimon.uid === attacker.uid) {
           return count + 1;
