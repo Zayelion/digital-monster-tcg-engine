@@ -1,6 +1,6 @@
 import { Pile, Engine, isThisOption, getOpponentsDigimon } from "./helpers";
 
-function onPlay(card: Pile, engine: Engine) {
+function onPlay(card: Pile, engine: Engine): Effect {
   function mainEffect() {
     const options = getOpponentsDigimon(engine, card);
     if (!options.length) {
@@ -20,7 +20,7 @@ function onPlay(card: Pile, engine: Engine) {
   }
 
   return {
-    type: "ON_PLAY",
+    type: ["ON_PLAY", "SECURITY"],
     trigger: ({ player, cards, targets }) => {
       return isThisOption(engine, card, cards);
     },
@@ -28,32 +28,14 @@ function onPlay(card: Pile, engine: Engine) {
   };
 }
 
-function security(card: Pile, engine: Engine) {
-  return {
-    type: "SECURITY",
-    trigger: ({ player, cards, targets }) => {
-      return isThisOption(engine, card, cards);
-    },
-    effect: async () => {
-      engine.registerSecurityDPAugmentation(card.uid, (securityCard, dp) => {
-        if (card.player === securityCard.player) {
-          return dp + 7000;
-        }
-        return dp;
-      });
-      engine.atEndOfYourTurn(card, () => {
-        engine.deregisterSecurityDPAugmentation(card.uid);
-      });
-    },
-  };
-}
 
-function register(card: Pile, engine: Engine) {
+
+function register(card: Pile, engine: Engine): Effect[]  {
   card.playCost = 8;
   card.color = [COLOR.RED];
   card.id = "ST1-16";
 
-  return [onPlay(card, engine), security(card, engine)];
+  return [onPlay(card, engine)];
 }
 
 export default {

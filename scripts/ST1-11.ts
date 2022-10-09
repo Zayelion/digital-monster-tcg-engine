@@ -1,8 +1,8 @@
 import { isThisDigimon, Pile, Engine } from "./helpers";
 
-function duringYourTurn(card: Pile, engine: Engine) {
+function duringYourTurn(card: Pile, engine: Engine): Effect {
   return {
-    type: "WHEN_DIGIVOLVING",
+    type: ["WHEN_DIGIVOLVING"],
     trigger: ({ player, cards, targets }) => {
       return isThisDigimon(engine, card, cards);
     },
@@ -19,7 +19,7 @@ function duringYourTurn(card: Pile, engine: Engine) {
   };
 }
 
-function register(card: Pile, engine: Engine) {
+function register(card: Pile, engine: Engine): Effect[]  {
   card.playCost = 12;
   card.color = [COLOR.RED];
   card.level = LEVEL.MEGA;

@@ -1,6 +1,6 @@
 import { Pile, Engine, isThisOption, getOpponentsDigimon } from "./helpers";
 
-function onPlay(card: Pile, engine: Engine) {
+function onPlay(card: Pile, engine: Engine): Effect {
   function mainEffect() {
     const options = getOpponentsDigimon(engine, card).filter((digimon) => {
       return (digimon.currentDP || 0) <= 4000;
@@ -24,7 +24,7 @@ function onPlay(card: Pile, engine: Engine) {
   }
 
   return {
-    type: "ON_PLAY",
+    type:[ "ON_PLAY"],
     trigger: ({ player, cards, targets }) => {
       return isThisOption(engine, card, cards);
     },
@@ -32,9 +32,9 @@ function onPlay(card: Pile, engine: Engine) {
   };
 }
 
-function security(card: Pile, engine: Engine) {
+function security(card: Pile, engine: Engine): Effect {
   return {
-    type: "SECURITY",
+    type: ["SECURITY"],
     trigger: ({ player, cards, targets }) => {
       return isThisOption(engine, card, cards);
     },
@@ -52,7 +52,7 @@ function security(card: Pile, engine: Engine) {
   };
 }
 
-function register(card: Pile, engine: Engine) {
+function register(card: Pile, engine: Engine): Effect[]  {
   card.playCost = 6;
   card.color = [COLOR.RED];
   card.id = "ST1-15";

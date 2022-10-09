@@ -26,16 +26,16 @@ function whenAttacking(card: Pile, engine: Engine): Effect {
 
 function register(card: Pile, engine: Engine): Effect[]  {
   card.playCost = 5;
-  card.color = [COLOR.RED];
+  card.color = [COLOR.BLUE];
   card.level = LEVEL.CHAMPION;
-  card.id = "ST1-06";
+  card.id = "ST2-07";
   card.dp = 6000;
-  card.type = [TYPE.Dragon];
+  card.type = [TYPE.Beast];
   card.digivolutionCosts = [
     {
-      color: COLOR.RED,
-      level: 3,
+      color: COLOR.BLUE,
       cost: 2,
+      level: 3,
       digimon: [],
     },
   ];

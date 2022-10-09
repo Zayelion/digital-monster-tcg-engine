@@ -39,7 +39,7 @@ function getTriggerEffects(
 
   return effects
     .filter((effect) => {
-      return effect.type === action;
+      return effect.type.includes(action);
     })
     .filter((effect) => {
       return effect.trigger({ action, player, cards, targets });

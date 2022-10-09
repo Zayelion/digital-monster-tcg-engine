@@ -1,11 +1,12 @@
-import { Pile, Engine } from "./helpers";
+import { Pile, Engine, isThisDigimon } from "./helpers";
 
 function duringYourTurn(card: Pile, engine: Engine): Effect {
   return {
-    type: ["YOUR_TURN"],
+    type: ["WHILE_ATTACKING"],
     trigger: ({ cards, target }) => {
       const digimon = engine.getOwner(card);
-      return digimon.list.length > 4;
+      return target[0].list.length < 4 && isThisDigimon(engine, digimon, cards)
+      
     },
     effect: () => {
       const value = card.currentDP || 0;
@@ -15,9 +16,9 @@ function duringYourTurn(card: Pile, engine: Engine): Effect {
 }
 
 function register(card: Pile, engine: Engine): Effect[]  {
-  card.color = [COLOR.RED];
+  card.color = [COLOR.BLUE];
   card.level = LEVEL.BABY;
-  card.id = "ST1-01";
+  card.id = "ST2-01";
   card.type = [TYPE.Lesser];
   card.digivolutionCosts = [];
   return [duringYourTurn(card, engine)];

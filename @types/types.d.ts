@@ -1,3 +1,9 @@
+declare type Effect = {
+  type: string[],
+  trigger: Function,
+  effect: Function
+}
+
 declare enum PLAYER {
   ONE = 0,
   TWO = 1

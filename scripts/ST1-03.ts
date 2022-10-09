@@ -2,7 +2,7 @@ import { Pile, Engine } from "./helpers";
 
 function duringYourTurn(card: Pile) {
   return {
-    type: "YOUR_TURN",
+    type: ["YOUR_TURN"],
     trigger: () => {
       return true;
     },

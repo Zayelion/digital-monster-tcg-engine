@@ -67,7 +67,12 @@ export class Engine {
   }
 
   registerSecurityCheckAugmentation(id, effect): void {
-    this.securityCheckAugmentations.push({ id, effect });
+    const logged = this.securityCheckAugmentations.some((action) => {
+      return action.id !== id;
+    });
+    if (!logged) {
+      this.securityCheckAugmentations.push({ id, effect });
+    }
   }
 
   deregisterSecurityCheckAugmentation(id): void {
@@ -174,6 +179,10 @@ export class Engine {
 
   async blocker(card: Pile, target: Pile) {
     return new Promise((resolve) => {
+      if (card.flags.cannontBlock) {
+        resolve(false);
+        return;
+      }
       this.gameboard.question(card.player, 'blocker', [card], 1, async (answer) => {
         if (answer) {
           card.position = 'suspended';
@@ -191,6 +200,9 @@ export class Engine {
   }
 
   async declareBattle(card: Pile) {
+    if (card.flags.cannotAttack) {
+      return;
+    }
     await this.registerTrigger('WHILE_ATTACKING', this.gameboard, card.player, [card]);
     await this.registerTrigger('BLOCKER', this.gameboard, card.player, [card]);
     if (card.blocked) {
@@ -203,6 +215,10 @@ export class Engine {
 
   blitz(card: Pile): Promise<boolean> {
     return new Promise((resolve) => {
+      if (card.flags.cannotAttack) {
+        resolve(false);
+        return false;
+      }
       this.gameboard.question(card.player, 'blitz', [card], 1, async (answer) => {
         if (answer.ok) {
           card.position = 'suspended';

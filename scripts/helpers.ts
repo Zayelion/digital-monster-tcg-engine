@@ -19,9 +19,8 @@ export function isThisOption(engine: Engine, target: Pile, cards: Pile[]) {
   return isThisDigimon(engine, target, cards);
 }
 
-
 export function isInPlay(target: Pile) {
-  return target.location === LOCATION.BATTLEZONE
+  return target.location === LOCATION.BATTLEZONE;
 }
 
 export function getYourDigimon(engine: Engine, target: Pile): Pile[] {
@@ -43,3 +42,12 @@ export function getOpponentsDigimon(engine: Engine, target: Pile): Pile[] {
   return options;
 }
 
+export function removeEvolutionStack(engine, digimon) {
+  for (let item = digimon.list.length - 1; item <= 1; item - 1) {
+    const newDigimon = digimon.detach(item);
+    engine.gameboard.moveCard({
+      ...newDigimon,
+      location: LOCATION.TRASH,
+    });
+  }
+}

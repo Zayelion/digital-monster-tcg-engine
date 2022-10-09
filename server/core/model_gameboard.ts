@@ -7,7 +7,7 @@
 /**
  * @typedef {Object} Pile
  * @property {String} type Card/Token/Etc
- * @property {String} movelocation 'DECK'/'EGG' etc, in caps.
+ * @property {String} movelocation LOCATION.DECK/LOCATION.EGG etc, in caps.
  * @property {Number} player player int 0,1, etc of controlling player
  * @property {Number} originalController  player int 0,1, etc of owner
  * @property {Number} index  sequence of the card in the stack group. Example, nth card of DECK.
@@ -61,16 +61,15 @@
  * @param {Function(Card[]))} }
  */
 
-/**
- * @typedef  {Object} FieldCoordinate
- * @property {Number} uid   Unique card identifier in this game
- * @property {Number} player current player int 0,1, etc of controlling player
- * @property {String} location current location of the target card 'DECK'/'EGG' etc, in caps.
- * @property {Number} index  current sequence of the card in the stack group. Example, nth card of DECK. in the current location
- * @property {Number} code passcode of the card
- */
+type FieldCoordinate = {
+  uid?: number; //   Unique card identifier in this game
+  player: PLAYER; //current player int 0,1, etc of controlling player
+  location: LOCATION; //current location of the target card LOCATION.DECK/LOCATION.EGG etc, in caps.
+  index: number; //current sequence of the card in the stack group. Example, nth card of DECK. in the current location
+  code?: string; //passcode of the card
+};
 
-const deckPiles = ['DECK', 'HAND', 'EGG', 'SECURITY'],
+const deckPiles = [LOCATION.DECK, LOCATION.HAND, LOCATION.EGG, LOCATION.SECURITY],
   EventEmitter = require('events'), // a way to "notice" things occuring
   uniqueIdenifier = require('uuid/v4'); // time based unique identifier, RFC4122 version 1
 
@@ -113,7 +112,7 @@ export class Pile {
   uid: string;
   player: PLAYER;
   location: LOCATION;
-  index?: number;
+  index: number;
   position?: string;
   counters?: any;
   origin?: string;
@@ -130,7 +129,8 @@ export class Pile {
   attribute?: ATTRIBUTE;
   blocked: boolean = false;
   playCost: number = 0;
-  color: COLOR[] = COLOR.COLORLESS;
+  color: COLOR[] = [COLOR.COLORLESS];
+  flags: any;
 
   constructor(movelocation: LOCATION, player = 0, index = 0, uid = '', id = '') {
     this.id = id;
@@ -213,17 +213,17 @@ class Field {
 
   remove(query) {
     const card = this.search(query);
-    card.location = 'INMATERIAL';
+    card.location = LOCATION.INMATERIAL;
   }
 
   cleanCounters() {
     const list = this.stack.filter((pile: Pile) => {
       return (
-        pile.location === 'DECK' ||
-        pile.location === 'HAND' ||
-        pile.location === 'EGG' ||
-        pile.location === 'TRASH' ||
-        pile.location === 'SECURITY'
+        pile.location === LOCATION.DECK ||
+        pile.location === LOCATION.HAND ||
+        pile.location === LOCATION.EGG ||
+        pile.location === LOCATION.TRASH ||
+        pile.location === LOCATION.SECURITY
       );
     });
     list.forEach((pile) => {
@@ -243,7 +243,7 @@ class Field {
       return pile.player === player && pile.location === location;
     });
 
-    if (location === 'EGG') {
+    if (location === LOCATION.EGG) {
       zone.sort(function (primary, secondary) {
         if (primary.position === secondary.position) {
           return 0;
@@ -268,7 +268,7 @@ class Field {
     this.updateIndex();
   }
 
-  move(previous, current) {
+  move(previous: FieldCoordinate, current) {
     const pile = this.search(previous);
     if (!pile) {
       console.log('error', previous, current);
@@ -283,15 +283,15 @@ class Field {
       pile.state.list[0].id = current.id;
     }
 
-    if (pile.state.location === 'HAND') {
+    if (pile.state.location === LOCATION.HAND) {
       pile.state.position = 'Unsuspended';
     }
 
-    this.reIndex(current.player, 'TRASH');
-    this.reIndex(current.player, 'HAND');
-    this.reIndex(current.player, 'EGG');
-    this.reIndex(current.player, 'BATTLEZONE');
-    this.reIndex(current.player, 'EXCAVATED');
+    this.reIndex(current.player, LOCATION.TRASH);
+    this.reIndex(current.player, LOCATION.HAND);
+    this.reIndex(current.player, LOCATION.EGG);
+    this.reIndex(current.player, LOCATION.BATTLEZONE);
+    this.reIndex(current.player, LOCATION.EXCAVATED);
 
     this.cleanCounters();
 
@@ -560,16 +560,16 @@ export class GameBoard {
    * @param   {Number} player player int 0,1, etcthe given player
    * @returns {Object} all the cards the given player can see on their side of the field.
    */
-  generateViewCount(player) {
+  generateViewCount(player: PLAYER) {
     const playersCards = filterPlayer(this.stack.cards(), player),
-      deck = filterlocation(playersCards, 'DECK'),
-      hand = filterlocation(playersCards, 'HAND'),
-      trash = filterlocation(playersCards, 'TRASH'),
-      egg = filterlocation(playersCards, 'EGG'),
-      security = filterlocation(playersCards, 'SECURITY'),
-      breedingzone = filterlocation(playersCards, 'BREEDINGZONE'),
-      battlezone = filterlocation(playersCards, 'BATTLEZONE'),
-      onfield = filterlocation(playersCards, 'ONFIELD');
+      deck = filterlocation(playersCards, LOCATION.DECK),
+      hand = filterlocation(playersCards, LOCATION.HAND),
+      trash = filterlocation(playersCards, LOCATION.TRASH),
+      egg = filterlocation(playersCards, LOCATION.EGG),
+      security = filterlocation(playersCards, LOCATION.SECURITY),
+      breedingzone = filterlocation(playersCards, LOCATION.BREEDINGZONE),
+      battlezone = filterlocation(playersCards, LOCATION.BATTLEZONE),
+      onfield = filterlocation(playersCards, LOCATION.ONFIELD);
 
     return {
       DECK: deck.length,
@@ -587,16 +587,16 @@ export class GameBoard {
    * @param   {Number} player player int 0,1, etcthe given player
    * @returns {Object} all the cards the given player can see on their side of the field.
    */
-  generateUpdateView(player) {
+  generateUpdateView(player: PLAYER) {
     const playersCards = filterPlayer(this.stack.cards(), player),
-      deck = filterlocation(playersCards, 'DECK'),
-      hand = filterlocation(playersCards, 'HAND'),
-      trash = filterlocation(playersCards, 'TRASH'),
-      egg = filterlocation(playersCards, 'EGG'),
-      security = filterlocation(playersCards, 'SECURITY'),
-      breedingzone = filterlocation(playersCards, 'BREEDINGZONE'),
-      battlezone = filterlocation(playersCards, 'BATTLEZONE'),
-      onfield = filterlocation(playersCards, 'ONFIELD');
+      deck = filterlocation(playersCards, LOCATION.DECK),
+      hand = filterlocation(playersCards, LOCATION.HAND),
+      trash = filterlocation(playersCards, LOCATION.TRASH),
+      egg = filterlocation(playersCards, LOCATION.EGG),
+      security = filterlocation(playersCards, LOCATION.SECURITY),
+      breedingzone = filterlocation(playersCards, LOCATION.BREEDINGZONE),
+      battlezone = filterlocation(playersCards, LOCATION.BATTLEZONE),
+      onfield = filterlocation(playersCards, LOCATION.ONFIELD);
 
     return {
       DECK: deck.sort(sortByIndex),
@@ -615,20 +615,20 @@ export class GameBoard {
    * @param   {Number} player player int 0,1, etcthe given player
    * @returns {Object} all the cards the given player can see on their side of the field.
    */
-  generateSinglePlayerView(player) {
+  generateSinglePlayerView(player: PLAYER) {
     const playersCards = this.filterEdited(
         filterPlayer(JSON.parse(JSON.stringify(this.stack.cards())), player)
       ),
-      deck = filterlocation(playersCards, 'DECK'),
-      hand = filterlocation(playersCards, 'HAND'),
-      trash = filterlocation(playersCards, 'TRASH'),
-      egg = filterlocation(playersCards, 'EGG'),
-      security = filterlocation(playersCards, 'SECURITY'),
-      breedingzone = filterlocation(playersCards, 'BREEDINGZONE'),
-      battlezone = filterlocation(playersCards, 'BATTLEZONE'),
-      excavated = filterlocation(playersCards, 'EXCAVATED'),
-      inmaterial = filterlocation(playersCards, 'INMATERIAL'),
-      onfield = filterlocation(playersCards, 'ONFIELD');
+      deck = filterlocation(playersCards, LOCATION.DECK),
+      hand = filterlocation(playersCards, LOCATION.HAND),
+      trash = filterlocation(playersCards, LOCATION.TRASH),
+      egg = filterlocation(playersCards, LOCATION.EGG),
+      security = filterlocation(playersCards, LOCATION.SECURITY),
+      breedingzone = filterlocation(playersCards, LOCATION.BREEDINGZONE),
+      battlezone = filterlocation(playersCards, LOCATION.BATTLEZONE),
+      excavated = filterlocation(playersCards, LOCATION.EXCAVATED),
+      inmaterial = filterlocation(playersCards, LOCATION.INMATERIAL),
+      onfield = filterlocation(playersCards, LOCATION.ONFIELD);
 
     return {
       DECK: hideViewOfZone(deck),
@@ -649,20 +649,20 @@ export class GameBoard {
    * @param   {Number} player player int 0,1, etcthe given player
    * @returns {Object} all the cards the given spectator/opponent can see on that side of the field.
    */
-  generateSinglePlayerSpectatorView(player) {
+  generateSinglePlayerSpectatorView(player: PLAYER) {
     const playersCards = this.filterEdited(
         filterPlayer(JSON.parse(JSON.stringify(this.stack.cards())), player)
       ),
-      deck = filterlocation(playersCards, 'DECK'),
-      hand = filterlocation(playersCards, 'HAND'),
-      trash = filterlocation(playersCards, 'TRASH'),
-      egg = filterlocation(playersCards, 'EGG'),
-      security = filterlocation(playersCards, 'SECURITY'),
-      breedingzone = filterlocation(playersCards, 'BREEDINGZONE'),
-      battlezone = filterlocation(playersCards, 'BATTLEZONE'),
-      excavated = filterlocation(playersCards, 'EXCAVATED'),
-      inmaterial = filterlocation(playersCards, 'INMATERIAL'),
-      onfield = filterlocation(playersCards, 'ONFIELD');
+      deck = filterlocation(playersCards, LOCATION.DECK),
+      hand = filterlocation(playersCards, LOCATION.HAND),
+      trash = filterlocation(playersCards, LOCATION.TRASH),
+      egg = filterlocation(playersCards, LOCATION.EGG),
+      security = filterlocation(playersCards, LOCATION.SECURITY),
+      breedingzone = filterlocation(playersCards, LOCATION.BREEDINGZONE),
+      battlezone = filterlocation(playersCards, LOCATION.BATTLEZONE),
+      excavated = filterlocation(playersCards, LOCATION.EXCAVATED),
+      inmaterial = filterlocation(playersCards, LOCATION.INMATERIAL),
+      onfield = filterlocation(playersCards, LOCATION.ONFIELD);
 
     return {
       DECK: hideViewOfZone(deck),
@@ -787,23 +787,23 @@ export class GameBoard {
    * @returns {undefined}
    */
   drawCard(player, numberOfCards) {
-    const currenthand = filterlocation(filterPlayer(this.stack.cards(), player), 'HAND').length;
+    const currenthand = filterlocation(filterPlayer(this.stack.cards(), player), LOCATION.HAND).length;
     let topcard;
     let deck;
     let cards: Pile[] = [];
 
     for (let i = 0; i < numberOfCards; i += 1) {
-      deck = filterlocation(filterPlayer(this.stack.cards(), player), 'DECK');
+      deck = filterlocation(filterPlayer(this.stack.cards(), player), LOCATION.DECK);
       topcard = deck[deck.length - 1];
       this.stack.move(
         {
           player: topcard.player,
-          location: 'DECK',
+          location: LOCATION.DECK,
           index: topcard.index
         },
         {
           player,
-          location: 'HAND',
+          location: LOCATION.HAND,
           index: currenthand + i,
           position: 'Unsuspended',
           id: cards[i].id || topcard.id
@@ -815,22 +815,22 @@ export class GameBoard {
   }
 
   recover(player, numberOfCards) {
-    const security = filterlocation(filterPlayer(this.stack.cards(), player), 'SECURITY').length;
+    const security = filterlocation(filterPlayer(this.stack.cards(), player), LOCATION.SECURITY).length;
     let topcard;
     let deck;
 
     for (let i = 0; i < numberOfCards; i += 1) {
-      deck = filterlocation(filterPlayer(this.stack.cards(), player), 'DECK');
+      deck = filterlocation(filterPlayer(this.stack.cards(), player), LOCATION.DECK);
       topcard = deck[deck.length - 1];
       this.stack.move(
         {
           player: topcard.player,
-          location: 'DECK',
+          location: LOCATION.DECK,
           index: topcard.index
         },
         {
           player,
-          location: 'SECURITY',
+          location: LOCATION.SECURITY,
           index: security + i,
           position: 'Unsuspended'
         }
@@ -881,7 +881,7 @@ export class GameBoard {
     );
   }
 
-  getField(player) {
+  getField(player: PLAYER) {
     return this.generateView('start')['p' + player].field;
   }
 
@@ -896,17 +896,17 @@ export class GameBoard {
     this.state.memory = 0;
 
     player1.main.forEach((card, index) => {
-      this.addCard('DECK', 0, index, card);
+      this.addCard(LOCATION.DECK, 0, index, card);
     });
     player2.main.forEach((card, index) => {
-      this.addCard('DECK', 1, index, card);
+      this.addCard(LOCATION.DECK, 1, index, card);
     });
 
     player1.egg.forEach((card, index) => {
-      this.addCard('EGG', 0, index, card);
+      this.addCard(LOCATION.EGG, 0, index, card);
     });
     player2.egg.forEach((card, index) => {
-      this.addCard('EGG', 1, index, card);
+      this.addCard(LOCATION.EGG, 1, index, card);
     });
     this.stack.updateIndex();
     this.announcement(0, { command: 'MSG_ORIENTATION', slot: 0 });

@@ -1,8 +1,8 @@
 import { Pile, Engine, isThisTamer, getYourDigimon } from "./helpers";
 
-function duringYourTurn(card: Pile, engine: Engine) {
+function duringYourTurn(card: Pile, engine: Engine):Effect {
   return {
-    type: "YOUR_TURN",
+    type: ["YOUR_TURN", "SECURITY"],
     trigger: ({ player, cards, targets }) => {
       return isThisTamer(engine, card, cards);
     },
@@ -26,9 +26,9 @@ function duringYourTurn(card: Pile, engine: Engine) {
   };
 }
 
-function security(card: Pile, engine: Engine) {
+function security(card: Pile, engine: Engine): Effect {
   return {
-    type: "SECURITY",
+    type: ["SECURITY"],
     trigger: ({ player, cards, targets }) => {
       return isThisTamer(engine, card, cards);
     },
@@ -38,7 +38,7 @@ function security(card: Pile, engine: Engine) {
   };
 }
 
-function register(card: Pile, engine: Engine) {
+function register(card: Pile, engine: Engine): Effect[]  {
   card.playCost = 2;
   card.color = [COLOR.RED];
   card.id = "ST1-12";

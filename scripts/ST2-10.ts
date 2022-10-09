@@ -1,16 +1,16 @@
-import { GameBoard, Pile } from "../server/core/model_gameboard";
+import { Pile } from "./helpers";
 
 function register(card: Pile): Effect[] {
+  card.color = [COLOR.BLUE];
   card.playCost = 10;
-  card.color = [COLOR.RED];
   card.level = LEVEL.MEGA;
-  card.id = "ST1-02";
+  card.id = "ST2-10";
   card.dp = 12000;
-  card.type = [TYPE["Holy Beast"]];
-  card.attribute = ATTRIBUTE.Vaccine;
+  card.type = [TYPE.Plesiosaur];
+  card.attribute = ATTRIBUTE.Data;
   card.digivolutionCosts = [
     {
-      color: COLOR.RED,
+      color: COLOR.BLUE,
       cost: 2,
       level: 5,
       digimon: [],
