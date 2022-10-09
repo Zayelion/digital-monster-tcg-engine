@@ -19,6 +19,26 @@ import * as ST1_14 from "./ST1-07";
 import * as ST1_15 from "./ST1-07";
 import * as ST1_16 from "./ST1-07";
 
+/**
+ * Starter Deck ST2
+ */
+import * as ST2_01 from "./ST2-01";
+import * as ST2_02 from "./ST2-02";
+import * as ST2_03 from "./ST2-03";
+import * as ST2_04 from "./ST2-04";
+import * as ST2_05 from "./ST2-05";
+import * as ST2_06 from "./ST2-06";
+import * as ST2_07 from "./ST2-07";
+import * as ST2_08 from "./ST2-07";
+import * as ST2_09 from "./ST2-07";
+import * as ST2_10 from "./ST2-07";
+import * as ST2_11 from "./ST2-07";
+import * as ST2_12 from "./ST2-07";
+import * as ST2_13 from "./ST2-07";
+import * as ST2_14 from "./ST2-07";
+import * as ST2_15 from "./ST2-07";
+import * as ST2_16 from "./ST2-07";
+
 
 
 export default {
@@ -38,4 +58,20 @@ export default {
   ST1_14,
   ST1_15,
   ST1_16,
+  ST2_01,
+  ST2_02,
+  ST2_03,
+  ST2_04,
+  ST2_05,
+  ST2_06,
+  ST2_07,
+  ST2_08,
+  ST2_09,
+  ST2_10,
+  ST2_11,
+  ST2_12,
+  ST2_13,
+  ST2_14,
+  ST2_15,
+  ST2_16,
 };
