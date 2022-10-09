@@ -1,15 +1,3 @@
-/**
-	
-Giga Destroyer
-Play Cost	6
-ST1-15
-Effects:
-- <Main> Destroy up to 2 opponent Digimon whose DP is 4000 or lower.
-
-Security Effect: 
-- <Security> Activate this card's Main effect.
-**/
-
 import { Pile, Engine, isThisOption, getOpponentsDigimon } from "./helpers";
 
 function onPlay(card: Pile, engine: Engine) {

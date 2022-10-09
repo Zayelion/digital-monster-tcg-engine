@@ -1,13 +1,3 @@
-/**
- * 		
-Yagami Taichi
-Play Cost	2
-ST1-12
-Effects:
-- Your Turn All of your Digimon get +1000 DP.
-  Security Effect: Security Play this card without paying its Cost.
-**/
-
 import { Pile, Engine, isThisTamer, getYourDigimon } from "./helpers";
 
 function duringYourTurn(card: Pile, engine: Engine) {
@@ -22,7 +12,7 @@ function duringYourTurn(card: Pile, engine: Engine) {
         return;
       }
 
-      const registration = options.map(async(digimon) => {
+      const registration = options.map(async (digimon) => {
         await engine.dpChange(digimon, 1000);
         engine.atEndOfYourTurn(card, async () => {
           if (digimon.location === LOCATION.BATTLEZONE) {
@@ -43,7 +33,7 @@ function security(card: Pile, engine: Engine) {
       return isThisTamer(engine, card, cards);
     },
     effect: async () => {
-     engine.gameboard.moveCard({...card, location: LOCATION.BATTLEZONE})
+      engine.gameboard.moveCard({ ...card, location: LOCATION.BATTLEZONE });
     },
   };
 }

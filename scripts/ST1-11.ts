@@ -1,18 +1,3 @@
-/**
- * 		
-WarGreymon
-DP 12000
-Play Cost	12
-Evolution Cost 4 from Lv.5
-Level 6
-ST1-10
-Level: Ultimate | Attribute: Vaccine | Type: Dragonkin
-Effects:
-• Your Turn For every 2 Evolution Bases this Digimon has, this Digimon gains Security Attack + 1 (The number of Security cards this Digimon Checks increases by 1).
-Evolution Base Effects:
-  -
-**/
-
 import { isThisDigimon, Pile, Engine } from "./helpers";
 
 function duringYourTurn(card: Pile, engine: Engine) {
@@ -22,10 +7,10 @@ function duringYourTurn(card: Pile, engine: Engine) {
       return isThisDigimon(engine, card, cards);
     },
     effect: () => {
-      engine.registerSecurityAugmentation(card.uid, (attacker, count) => {
+      engine.registerSecurityCheckAugmentation(card.uid, (attacker, count) => {
         const digimon = engine.getOwner(card);
         if (digimon.uid === attacker.uid) {
-          const additionalAttacks = Math.floor((digimon.list.length - 1) /2)
+          const additionalAttacks = Math.floor((digimon.list.length - 1) / 2);
           return count + additionalAttacks;
         }
         return count;

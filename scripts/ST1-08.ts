@@ -1,18 +1,3 @@
-/**
- * 		
-Garudamon
-DP 7000
-Play Cost	6
-Evolution Cost 3 from Lv.4
-Level 5
-ST1-07
-Level: Ultimate | Attribute: Vaccine | Type: Bird Man
-Effects:
--
-Evolution Base Effects:
-  Choose one of your Digimon; that Digimon gets +3000 DP for the rest of this turn.
-**/
-
 import { isThisDigimon, getYourDigimon, Pile, Engine } from "./helpers";
 
 function duringYourTurn(card: Pile, engine: Engine) {

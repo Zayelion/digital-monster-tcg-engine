@@ -1,20 +1,4 @@
-/**
-
-Dracomon
-DP 4000
-Play Cost 2
-Evolution Cost	3		0 from Lv.2
-Lv.3		
-ST1-04
-Level: Child | Attribute: Data | Type: Dragon
-Effects:
--
-
-Evolution Base Effects:
--
-**/
-
-import { GameBoard, Pile } from "../server/core/model_gameboard";
+import { Pile, Engine } from "./helpers";
 
 function register(card: Pile) {
   card.playCost = 2;
@@ -23,7 +7,7 @@ function register(card: Pile) {
   card.id = "ST1-04";
   card.dp = 4000;
   card.type = [TYPE.Dragon];
-  card.attribute = ATTRIBUTE.Data
+  card.attribute = ATTRIBUTE.Data;
   card.digivolutionCosts = [
     {
       color: COLOR.RED,

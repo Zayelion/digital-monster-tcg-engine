@@ -1,24 +1,11 @@
-/**
- * 		
-Koromon
-ST1-01 U	
-Level: Baby | Type: Lesser
-Effects:
--
-
-Evolution Base Effects:
-• Your Turn As long as this Digimon has 4 or more Evolution Bases, this Digimon gets +1000 DP.
-**/
-
-import { Engine } from "../server/core/engine_api";
-import { GameBoard, Pile } from "./../server/core/model_gameboard";
+import { Pile, Engine } from "./helpers";
 
 function duringYourTurn(card: Pile, engine: Engine) {
   return {
     type: "YOUR_TURN",
     trigger: ({ cards, target }) => {
       const digimon = engine.getOwner(card);
-      return digimon.stack.lgenth > 4;
+      return digimon.list.length > 4;
     },
     effect: () => {
       const value = card.currentDP || 0;

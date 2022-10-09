@@ -1,20 +1,4 @@
-/**
-
-Birdramon
-DP 5000
-Play Cost 4
-Evolution Cost 2 from Lv.3
-Lv.3		
-ST1-05
-Level: Champion | Attribute: Data | Type: Dragon
-Effects:
--
-
-Evolution Base Effects:
--
-**/
-
-import { GameBoard, Pile } from "../server/core/model_gameboard";
+import {  Pile, Engine } from "./helpers";
 
 function register(card: Pile) {
   card.playCost = 4;

@@ -1,18 +1,3 @@
-/**
- * 		
-Greymon
-DP 7000
-Play Cost	5
-Evolution Cost 3 from Lv.4
-Level 5
-ST1-09
-Level: Champion | Attribute: Vaccine | Type: Cyborg
-Effects:
--
-Evolution Base Effects:
-  <Security Attack +1>
-**/
-
 import { isThisDigimon, Pile, Engine } from "./helpers";
 
 function duringYourTurn(card: Pile, engine: Engine) {

@@ -1,25 +1,10 @@
-/**
-Agumon
-DP 2000
-Play Cost	3
-Evolution Cost 0 from Lv.2
-Level 3		
-ST1-03
-Level: Child | Attribute: Vaccine | Type: Reptile
-Effects:
--
-
-Evolution Base Effects:
-• Your Turn This Digimon gets +1000 DP.
-**/
-
-import { GameBoard, Pile } from "../server/core/model_gameboard";
+import { Pile, Engine } from "./helpers";
 
 function duringYourTurn(card: Pile) {
   return {
     type: "YOUR_TURN",
     trigger: () => {
-      return true
+      return true;
     },
     effect: () => {
       const value = card.currentDP || 0;

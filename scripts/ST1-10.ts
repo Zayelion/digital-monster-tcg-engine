@@ -1,19 +1,3 @@
-/**
-
-Hououmon
-DP 12000
-Play Cost 10
-Evolution Cost	2		0 from Lv.2
-Lv.6		
-ST1-10	
-Level: Mega | Attribute: Vaccine | Type: Chick
-Effects:
--
-
-Evolution Base Effects:
--
-**/
-
 import { GameBoard, Pile } from "../server/core/model_gameboard";
 
 function register(card: Pile) {

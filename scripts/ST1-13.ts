@@ -1,15 +1,3 @@
-/**
- * 		
-Shadow Wing
-Play Cost	1
-ST1-13
-Effects:
-- <Main> Choose one of your Digimon; that Digimon gets +3000 DP for the rest of this turn.
-
-Security Effect: 
-- <Security> All of your Digimon gain <Security Attack + 1> until the end of your next turn.
-**/
-
 import { Pile, Engine, isThisOption, getYourDigimon } from "./helpers";
 
 function onPlay(card: Pile, engine: Engine) {

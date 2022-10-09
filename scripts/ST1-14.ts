@@ -1,15 +1,3 @@
-/**
- * 		
-Starlight Explosion
-Play Cost	2
-ST1-14
-Effects:
-- <Main> All of your Security Digimon get +7000 DP until the end of the opponent's next turn.
-
-Security Effect: 
-- <Security> All of your Security Digimon get +7000 DP for the rest of this turn.
-**/
-
 import { Pile, Engine, isThisOption, getYourDigimon } from "./helpers";
 
 function onPlay(card: Pile, engine: Engine) {

@@ -1,15 +1,3 @@
-/**
-	
-Gaia Force
-Play Cost	8
-ST1-16
-Effects:
-- <Main> Destroy 1 opponent Digimon.
-
-Security Effect: 
-- <Security> Activate this card's Main effect.
-**/
-
 import { Pile, Engine, isThisOption, getOpponentsDigimon } from "./helpers";
 
 function onPlay(card: Pile, engine: Engine) {

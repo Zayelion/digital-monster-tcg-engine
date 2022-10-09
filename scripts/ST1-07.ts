@@ -1,18 +1,3 @@
-/**
- * 		
-Greymon
-DP 4000
-Play Cost	5
-Evolution Cost 2 from Lv.3
-Level 4
-ST1-07
-Level: Champion | Attribute: Vaccine | Type: Dinosaur
-Effects:
--
-Evolution Base Effects:
-  <Security Attack +1>
-**/
-
 import { isThisDigimon, Pile, Engine } from "./helpers";
 
 function duringYourTurn(card: Pile, engine: Engine) {
