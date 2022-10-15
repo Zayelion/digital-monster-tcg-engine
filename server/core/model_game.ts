@@ -1,6 +1,7 @@
-import { GameBoard, Pile } from './model_gameboard';
+import { GameBoard, Pile, UIPayload, UICallback } from './model_gameboard';
 import { Engine } from './engine_api';
 import * as scripts from '../../scripts';
+import { PlayerAbstraction } from './core';
 
 type GameEvent = {
   action;
@@ -108,14 +109,7 @@ function suggestMainAction(gameBoard: GameBoard, engine, player) {
   const digivolve = getTriggerEffects('CAN_DIGIVOLVE', gameBoard, player);
   const play = field.HAND; // filter for digimon
 
-  const options = {
-    play,
-    digivolve,
-    tamer,
-    option,
-    attack,
-    next: true
-  };
+  const options = [{ play }, { digivolve }, { tamer }, { option }, { attack }, { next: true }];
 
   gameBoard.question(player, 'main', options, 1, async (answer) => {
     const field = gameBoard.generateSinglePlayerView(player);
@@ -129,7 +123,7 @@ function suggestMainAction(gameBoard: GameBoard, engine, player) {
       case 'play':
         digimon = field.HAND[answer.index];
         engine.memory(player, digimon.playCost);
-        gameBoard.setState({ ...digimon, location: 'BATTLEZONE', position: 'Unsuspended' });
+        gameBoard.setState({ ...digimon, movelocation: LOCATION.BATTLEZONE, position: 'Unsuspended' });
         await registerTrigger('ON_PLAY', gameBoard, player, [digimon]);
         break;
 
@@ -145,19 +139,19 @@ function suggestMainAction(gameBoard: GameBoard, engine, player) {
 
       case 'tamer':
         tamer = field.HAND[answer.index];
-        gameBoard.setState({ ...tamer, location: 'BATTLEZONE' });
+        gameBoard.setState({ ...tamer, location: LOCATION.BATTLEZONE });
         await registerTrigger('ON_PLAY', gameBoard, player, [tamer]);
         break;
 
       case 'option':
         option = field.HAND[answer.index];
-        gameBoard.setState({ ...option, location: 'BATTLEZONE' });
+        gameBoard.setState({ ...option, location: LOCATION.BATTLEZONE });
         await registerTrigger('ON_PLAY', gameBoard, player, [option]);
         break;
 
       case 'attack':
         digimon = field.BATTLEZONE[answer.index];
-        gameBoard.setState({ ...digimon, location: 'BATTLEZONE', position: 'Suspended' });
+        gameBoard.setState({ ...digimon, location: LOCATION.BATTLEZONE, position: 'Suspended' });
         await registerTrigger('ON_ATTACKING', gameBoard, player, [digimon], answer.target);
         engine.declareBattle(digimon);
         break;
@@ -172,13 +166,9 @@ function suggestMainAction(gameBoard: GameBoard, engine, player) {
 function suggestBreedingAction(gameBoard: GameBoard, player) {
   const field = gameBoard.generateSinglePlayerView(player);
   const hatch = !field.BREEDINGZONE.length;
-  const move = hatch ? false : field.BREEDINGZONE[0][field.BREEDINGZONE[0].length - 1].level > 2;
+  const move = hatch ? false : field.BREEDINGZONE[0].level > 2;
 
-  const options = {
-    hatch,
-    move,
-    nothing: true
-  };
+  const options = [{ hatch }, { move }, { next: true }];
 
   return new Promise((resolve, reject) => {
     gameBoard.question(player, 'breeding', options, 1, (answer) => {
@@ -187,16 +177,16 @@ function suggestBreedingAction(gameBoard: GameBoard, player) {
         case 'hatch':
           {
             const digimon = field.EGG[field.EGG.length - 0];
-            gameBoard.setState({ ...digimon, location: 'BREEDINGZONE', position: 'Unsuspended' });
+            gameBoard.setState({ ...digimon, location: LOCATION.BREEDINGZONE, position: 'Unsuspended' });
           }
           break;
         case 'move':
           {
             const digimon = field.BREEDINGZONE[0];
-            gameBoard.setState({ ...digimon, location: 'BATTLEZONE' });
+            gameBoard.setState({ ...digimon, location: LOCATION.BATTLEZONE });
           }
           break;
-        case 'nothing':
+        case 'next':
           break;
       }
       resolve(answer);
@@ -204,32 +194,35 @@ function suggestBreedingAction(gameBoard: GameBoard, player) {
   });
 }
 
-async function turn(gameBoard: GameBoard, engine, player) {
+async function turn(gameBoard: GameBoard, engine, player, errorHandler) {
   let gameLoss;
   let outOfMemory = false;
-
-  const unspendedCards = unsuspendPhase(gameBoard, player);
-  gameBoard.nextPhase(1);
-  gameLoss = !drawPhase(gameBoard, player);
-  if (gameLoss) {
-    return gameLoss;
-  }
-  gameBoard.nextPhase(2);
-  gameLoss = await suggestBreedingAction(gameBoard, player);
-  gameBoard.nextPhase(3);
-
-  while (!outOfMemory) {
-    gameLoss = await suggestMainAction(gameBoard, engine, player);
+  try {
+    const unspendedCards = unsuspendPhase(gameBoard, player);
+    gameBoard.nextPhase(1);
+    gameLoss = !drawPhase(gameBoard, player);
     if (gameLoss) {
-      return gameLoss;
+      return player ? 0 : 1;
     }
-    outOfMemory = player ? gameBoard.memory > -1 : gameBoard.memory < 1;
+    gameBoard.nextPhase(2);
+    gameLoss = await suggestBreedingAction(gameBoard, player);
+    gameBoard.nextPhase(3);
+
+    while (!outOfMemory) {
+      gameLoss = await suggestMainAction(gameBoard, engine, player);
+      if (gameLoss) {
+        return player ? 0 : 1;
+      }
+      outOfMemory = player ? gameBoard.memory > -1 : gameBoard.memory < 1;
+    }
+
+    endPhase(gameBoard, engine, player);
+
+    const nextPlayer = player ? 1 : 0;
+    return await turn(gameBoard, engine, nextPlayer, errorHandler);
+  } catch (error) {
+    errorHandler(error);
   }
-
-  endPhase(gameBoard, engine, player);
-
-  const nextPlayer = 0 ? 1 : 0;
-  turn(gameBoard, engine, nextPlayer);
 }
 
 function load(gameBoard, engine) {
@@ -244,10 +237,35 @@ function load(gameBoard, engine) {
   });
 }
 
-export function Game(decks, playerInterface: Function) {
+function gameBoardInterface(players: PlayerAbstraction[], spectators: PlayerAbstraction[]): UICallback {
+  return function callback(payload: UIPayload, pile: Pile[]): void {
+    if (payload.p0) {
+      players[0].write(payload.p0);
+    }
+    if (payload.p1) {
+      players[1].write(payload.p1);
+    }
+    if (payload.spectator) {
+      spectators.forEach((spectator) => {
+        spectator.write(payload.spectator);
+      });
+    }
+  };
+}
+
+async function playGame(gameBoard, engine, errorHandler) {
+  const winner = await turn(gameBoard, engine, 0, errorHandler);
+
+  // alert winner
+
+  // record things.
+}
+
+export function Game(game, state, errorHandler, players: PlayerAbstraction[], spectators) {
   // decide who goes first
 
-  const gameBoard = new GameBoard(playerInterface);
+  const boardInterface = gameBoardInterface(players, spectators);
+  const gameBoard = new GameBoard(boardInterface);
   const engine = new Engine(gameBoard, registerTrigger);
 
   // load decks into deckspace and egg zone
@@ -264,5 +282,5 @@ export function Game(decks, playerInterface: Function) {
 
   // start phases
 
-  turn(gameBoard, engine, 0);
+  playGame(gameBoard, engine, errorHandler);
 }

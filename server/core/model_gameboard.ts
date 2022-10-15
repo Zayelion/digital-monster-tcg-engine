@@ -1,95 +1,100 @@
 // You should be drinking scotch and listening to german electronica while reading this.
 
-/**
- * @file Creates instances of game state, and methods of manipulating them.
- */
+import { Deck } from './lib_validate_deck';
 
-/**
- * @typedef {Object} Pile
- * @property {String} type Card/Token/Etc
- * @property {String} movelocation LOCATION.DECK/LOCATION.EGG etc, in caps.
- * @property {Number} player player int 0,1, etc of controlling player
- * @property {Number} originalController  player int 0,1, etc of owner
- * @property {Number} index  sequence of the card in the stack group. Example, nth card of DECK.
- * @property {Number} unique unique ID of the card
- * @property {Number} id   passcode of the card
- * @property {Object} counters  counters on the card
- * @property {Number} overlayIndex  counters on the card
- * @property {String} position Unsuspended, Facedown, etc
- */
-
-/**
- * @typedef  {Object} FieldView
- * @property {Pile[]} DECK Cards in the deck of one player.
- * @property {Pile[]} HAND Cards in the hand of one player.
- * @property {Pile[]} TRASH Cards in the trashyard "GY" of one player.
- * @property {Pile[]} EGG Cards in the egg deck of one player.
- * @property {Pile[]} SECURITY Cards SECURITY from play,"Banished" of one player.
- * @property {Pile[]} BREEDINGZONE Cards in the spell and pendulum zones of one player.
- * @property {Pile[]} BATTLEZONE Cards in the Main Monster zones and Extra Monster zone of one player.
- * @property {Pile[]} EXCAVATED Cards Excavated by one player atm, or held.
- * @property {Pile[]} INMATERIAL Tokens removed from the board after being created.
- */
-
-/**
- * @typedef {Object} GameState
- * @property {Number} turn Current total turn count
- * @property {Number} turnOfPlayer player int, 0, 1, etc that is currently making moves
- * @property {Number} memory memory count, second player is represented by negative integer value
- */
-
-/**
- * @typedef  {Object} UIPayloadUnit
- * @property {String} action Action the UI cases off of when it gets this message
- * @property {GameState} state State of the game for the UI to update itself with
- * @property {FieldView} view view of the field
- */
-
-/**
- * @typedef  {Object} UIPayload
- * @property {Array.<String>} name Names of each player
- * @property {UIPayloadUnit} p0 State of the game for the UI to update itself with
- * @property {UIPayloadUnit} p1 view of the field
- * @property {Number} player slot of the player, shifts view angle.
- * @property {UIPayloadUnit} spectator
- */
-
-/**
- * @typedef {Function} UICallback callback of initiation module, shoots directly to UI.
- * @param {UIPayload} view view of the field
- * @param {Pile[]} payload updated cards
- * @param {Function(Card[]))} }
- */
-
-type FieldCoordinate = {
-  uid?: number; //   Unique card identifier in this game
-  player: PLAYER; //current player int 0,1, etc of controlling player
-  location: LOCATION; //current location of the target card LOCATION.DECK/LOCATION.EGG etc, in caps.
-  index: number; //current sequence of the card in the stack group. Example, nth card of DECK. in the current location
-  code?: string; //passcode of the card
+type FieldView = {
+  DECK: Pile[];
+  HAND: Pile[];
+  TRASH: Pile[];
+  EGG: Pile[];
+  SECURITY: Pile[];
+  BREEDINGZONE: Pile[];
+  BATTLEZONE: Pile[];
+  ONFIELD: Pile[];
+  INMATERIAL: Pile[];
 };
 
-const deckPiles = [LOCATION.DECK, LOCATION.HAND, LOCATION.EGG, LOCATION.SECURITY],
-  EventEmitter = require('events'), // a way to "notice" things occuring
+type FieldViewCount = {
+  DECK: number;
+  HAND: number;
+  TRASH: number;
+  EGG: number;
+  SECURITY: number;
+  BREEDINGZONE: number;
+  BATTLEZONE: number;
+  ONFIELD: number;
+  INMATERIAL: number;
+};
+
+type GameState = {
+  turn: number;
+  turnOfPlayer: number;
+  memory: number;
+};
+
+export type UIPayloadUnit = {
+  action?: string;
+  gameAction?: string;
+  state?: GameState;
+  view?: FieldView;
+  player?: PLAYER;
+  info?: any;
+  field?: any;
+  reveal?: any;
+  call?: any;
+};
+
+export type UIPayload = {
+  names?: string[];
+  p0: UIPayloadUnit;
+  p1: UIPayloadUnit;
+  spectator: UIPayloadUnit;
+};
+
+export type Announcement = {
+  command : string
+  slot?: number
+}
+
+interface Query extends Partial<Pile> {
+  player: PLAYER;
+  location: LOCATION;
+  index: number;
+}
+
+export type GameBoardState = {
+  turn: number;
+  turnOfPlayer: number;
+  phase: number;
+  memory: number;
+};
+
+export type MoveRequest = {
+  player: PLAYER;
+  location: LOCATION;
+  index: number;
+  moveplayer?: PLAYER;
+  movelocation?: LOCATION;
+  moveindex?: number;
+  position?: string;
+};
+
+export type UICallback = (view: UIPayload, payload: Pile[]) => void;
+
+const EventEmitter = require('events'), // a way to "notice" things occuring
   uniqueIdenifier = require('uuid/v4'); // time based unique identifier, RFC4122 version 1
 
 /**
  * Sort function, sorts by card index
- * @param   {Pile}   first  card Object
- * @param   {Pile}   second card Object
- * @returns {Number}  if it comes before or after
  */
-function sortByIndex(first, second) {
-  return first.state.index - second.state.index;
+function sortByIndex(first: Pile, second: Pile): number {
+  return first.index - second.index;
 }
 
 /**
  * Filters out cards based on if they are a specific UID
- * @param {Pile[]} stack a stack of cards attached to a single monster as overlay units.
- * @param {Number} uid unique identifier
- * @returns {Boolean} if a card is that UID
  */
-function getByUID(stack, uid) {
+function getByUID(stack: Pile[], uid: string) {
   return stack.find(function (item) {
     return item.uid === uid;
   });
@@ -97,16 +102,16 @@ function getByUID(stack, uid) {
 
 /**
  * Filters out cards based on if they are a specific UID
- * @param {Pile[]} stack a stack of cards attached to a single monster as overlay units.
- * @param {Number} uid unique identifier
- * @returns {Boolean} if a card is that UID
  */
-function getByOrigin(stack, uid) {
+function getByOrigin(stack: Pile[], uid: string) {
   return stack.find(function (item) {
-    return item.state.origin === uid;
+    return item.origin === uid;
   });
 }
 
+/**
+ * Represents a single card. Keeps track of all cards that are stacked under it.
+ */
 export class Pile {
   id: string;
   uid: string;
@@ -131,8 +136,15 @@ export class Pile {
   playCost: number = 0;
   color: COLOR[] = [COLOR.COLORLESS];
   flags: any;
+  isPublic: false;
 
-  constructor(movelocation: LOCATION, player = 0, index = 0, uid = '', id = '') {
+  constructor(
+    movelocation: LOCATION,
+    player: PLAYER = 0,
+    index: number = 0,
+    uid: string = '',
+    id: string = ''
+  ) {
     this.id = id;
     this.uid = uid;
     this.player = player;
@@ -147,25 +159,37 @@ export class Pile {
     this.list = [this];
   }
 
-  render() {
+  /**
+   * Returns the card and all items under it.
+   */
+  render(): Pile[] {
     return this.list.reduce((output, card, overlayindex) => {
       output.push(Object.assign({ overlayindex } as Pile, card, this));
       return output;
     }, []);
   }
 
-  attach(card: Pile, sequence: number) {
+  /**
+   * Attaches a card underneath another card.
+   */
+  attach(card: Pile, sequence: number = this.list.length): void {
     card.pileuid = this.origin;
     this.list.splice(sequence, 0, card);
   }
 
-  detach(sequence) {
+  /**
+   * Detaches a card from underneath another card and moves it somewhere.
+   */
+  detach(sequence): Pile {
     const card = this.list.splice(sequence, 1)[0];
     card.pileuid = undefined;
     return card;
   }
 
-  update(data) {
+  /**
+   * Change some meta information about a card.
+   */
+  update(data: Partial<Pile>): void {
     if (!data) {
       return;
     }
@@ -173,24 +197,33 @@ export class Pile {
   }
 }
 
+/**
+ * Represents all the cards on the gameboards.
+ */
 class Field {
   stack: Pile[] = [];
   lookup = {};
 
   constructor() {}
 
-  cards() {
+  /**
+   * Return a list of all cards on the field.
+   */
+  cards(): Pile[] {
     return this.stack.reduce((output, pile) => {
       output = output.concat(pile.render());
       return output;
     }, []);
   }
 
-  length() {
+  get length(): number {
     return this.stack.length;
   }
 
-  search(query) {
+  /**
+   * Find a specific card
+   */
+  search(query: Query): Pile {
     const code = query.player + query.location + query.index,
       card =
         this.lookup[code] ||
@@ -204,19 +237,29 @@ class Field {
     return card;
   }
 
-  add(movelocation, player, index, code = 'unknown') {
+  /**
+   * Add a new card to the field. Creates it from thin air.
+   */
+  add(location: LOCATION, player: PLAYER, index: number, code = 'unknown'): Pile {
     const uuid = uniqueIdenifier();
-    const card = new Pile(movelocation, player, index, uuid, code);
+    const card = new Pile(location, player, index, uuid, code);
     this.stack.push(card);
     return card;
   }
 
-  remove(query) {
+  /**
+   * Moves a card to location where it is marked as not to be interacted with.
+   */
+  remove(query: Query): Pile {
     const card = this.search(query);
     card.location = LOCATION.INMATERIAL;
+    return card;
   }
 
-  cleanCounters() {
+  /**
+   * Removes counters from places counters should not exist.
+   */
+  cleanCounters(): void {
     const list = this.stack.filter((pile: Pile) => {
       return (
         pile.location === LOCATION.DECK ||
@@ -231,14 +274,20 @@ class Field {
     });
   }
 
-  updateIndex() {
+  /**
+   * Recalulates the lookup code for all the cards in a stack.
+   */
+  updateIndex(): void {
     this.stack.forEach((card: Pile) => {
       const code = card.player + card.location + card.index;
       this.lookup[code] = card.list.length ? card : undefined;
     });
   }
 
-  reIndex(player, location) {
+  /**
+   * Reindexs all the cards in a field location.
+   */
+  reIndex(player: PLAYER, location: LOCATION): void {
     const zone = this.stack.filter((pile) => {
       return pile.player === player && pile.location === location;
     });
@@ -268,23 +317,26 @@ class Field {
     this.updateIndex();
   }
 
-  move(previous: FieldCoordinate, current) {
+  /**
+   * Moves a card from one location to another.
+   */
+  move(previous: Query, current: Query) {
     const pile = this.search(previous);
     if (!pile) {
       console.log('error', previous, current);
     }
 
-    pile.state.player = current.player;
-    pile.state.location = current.location;
-    pile.state.index = current.index;
-    pile.state.position = current.position;
+    pile.player = current.player;
+    pile.location = current.location;
+    pile.index = current.index;
+    pile.position = current.position || pile.position;
 
-    if (pile.state.list[0].id !== undefined) {
-      pile.state.list[0].id = current.id;
+    if (pile.list[0].id !== undefined) {
+      pile.list[0].id = current.id;
     }
 
-    if (pile.state.location === LOCATION.HAND) {
-      pile.state.position = 'Unsuspended';
+    if (pile.location === LOCATION.HAND) {
+      pile.position = 'Unsuspended';
     }
 
     this.reIndex(current.player, LOCATION.TRASH);
@@ -298,55 +350,76 @@ class Field {
     return pile;
   }
 
-  detach(previous, sequence, current) {
+  /**
+   * Removes a card from under another card.
+   */
+  detach(previous: Query, sequence: number, current: Query): Pile {
     const parent = this.search(previous),
       card = parent.detach(sequence),
       original = getByOrigin(this.stack, card.uid);
 
-    original.state.list = [card];
-    this.move(original.state, current);
+    original.list = [card];
+    this.move(original, current);
+    return original;
   }
 
-  attach(previous, current) {
+  /**
+   * Places a card underneath another card.
+   */
+  attach(previous: Query, current: Query): Pile {
     const parent = this.search(previous),
       adopter = this.search(current);
 
-    adopter.state.list.push(parent.state.list.shift());
+    adopter.list.push(parent.list.shift());
+    return adopter;
   }
 
-  take(previous, sequence, current) {
+  /**
+   * Moves a card from underneath a card and places it underneath a different card.
+   */
+  take(previous: Query, sequence: number, current: Query) {
     const donor = this.search(previous),
       card = donor.detach(sequence),
       recipient = this.search(current);
 
     recipient.attach(card);
+    return recipient;
   }
 
-  evolve(previous, current) {
+  /**
+   * Takes a card and places it ontop of another card.
+   */
+  evolve(previous: Query, current: Query): Pile {
     const target = this.search(current),
       materials = this.search(previous);
 
-    target.cards = target.cards.concat(materials.cards);
-    materials.cards = [];
+    target.list = target.list.concat(materials.list);
+    materials.list = [];
+    return target;
   }
 
-  addCounter(query, type, amount) {
+  /**
+   * Places a counter on a card.
+   */
+  addCounter(query: Query, type: string, amount: number): Pile {
     const card = this.search(query);
     if (!card.counters[type]) {
       card.counters[type] = 0;
     }
     card.counters[type] += amount;
+    return card;
   }
 
-  update(data) {
-    //console.log(data.player, data.location, data.index, stack.length);
+  /**
+   * Updates the meta information of a card.
+   */
+  update(data: Query) {
     try {
       const pile = this.search(data);
       if (pile) {
         pile.update(data);
         return;
       }
-      // console.log('error', data);
     } catch (error) {
       console.log(error, 'no card at', data);
     }
@@ -355,11 +428,8 @@ class Field {
 
 /**
  * Filters out cards based on player.
- * @param {Pile[]} stack Array a stack of cards.
- * @param {Number} player player int 0,1, etc0 or 1
- * @returns {Pile[]} a stack of cards that belong to only one specified player.
  */
-function filterPlayer(stack, player) {
+function filterPlayer(stack: Pile[], player: PLAYER): Pile[] {
   return stack.filter(function (item) {
     return item.player === player;
   });
@@ -367,11 +437,8 @@ function filterPlayer(stack, player) {
 
 /**
  * Filters out cards based on zone.
- * @param {Pile[]} stack a stack of cards.
- * @param {String} location zone the card is in.
- * @returns {Pile[]} a stack of cards that are in only one location/zone.
  */
-function filterlocation(stack, location) {
+function filterlocation(stack: Pile[], location: LOCATION): Pile[] {
   return stack.filter(function (item) {
     return item.location === location;
   });
@@ -379,13 +446,11 @@ function filterlocation(stack, location) {
 
 /**
  * Changes a view of cards so the opponent can not see what they are.
- * @param   {Pile[]} view a collection of cards
- * @returns {Pile[]} a collection of cards
  */
-function hideViewOfZone(view) {
+function hideViewOfZone(view: Pile[]): Pile[] {
   const output: any[] = [];
   view.forEach(function (card, index) {
-    output[index] = {};
+    output[index] = {} as Pile;
     Object.assign(output[index], card);
     if (
       output[index].position === 'FaceDown' ||
@@ -403,18 +468,13 @@ function hideViewOfZone(view) {
 
 /**
  * Changes a view of cards so the opponent can not see what they are.
- * @param   {Pile[]} view a collection of cards
- * @param   {Boolean} allowed is the player allowed to see the card?
- * @returns {Pile[]} a collection of cards
  */
-function hideViewOfExtra(view, allowed) {
+function hideViewOfExtra(view: Pile[]): Pile[] {
   const output: any[] = [];
   view.forEach(function (card, index) {
     output[index] = {};
+
     Object.assign(output[index], card);
-    // if (card.position === 'UnsuspendedAttack') {
-    //     output[index].id = (allowed) ? card.id : 0;
-    // }
   });
 
   return output;
@@ -422,10 +482,8 @@ function hideViewOfExtra(view, allowed) {
 
 /**
  * Changes a view of cards in the hand so the opponent can not see what they are.
- * @param   {Pile[]} view a collection of cards
- * @returns {Pile[]} a collection of cards
  */
-function hideHand(view) {
+function hideHand(view: Pile[]): Pile[] {
   const output: any[] = [];
   view.forEach(function (card, index) {
     output[index] = {};
@@ -440,32 +498,28 @@ function hideHand(view) {
 }
 
 export class GameBoard {
-  callback;
+  callback: UICallback;
   answerListener;
   lastQuestion;
   stack: Field;
-  getCards;
-  addCard;
-  removeCard;
-  moveCard;
-  attachMaterial;
-  detachMaterial;
-  takeMaterial;
-  evolve;
-  update;
+  getCards: Function;
+  addCard: Function;
+  removeCard: Function;
+  moveCard: Function;
+  attachMaterial: Function;
+  detachMaterial: Function;
+  takeMaterial: Function;
+  evolve: Function;
+  update: Function;
   previousStack = [];
-  names;
-  state;
+  names: string[];
+  state: GameBoardState;
   field;
   info;
   decks;
-  memory = 0;
+  memory: number = 0;
 
-  constructor(callback) {
-    if (typeof callback !== 'function') {
-      throw new Error('UI Output Callback required');
-    }
-
+  constructor(callback: UICallback) {
     this.callback = callback;
     this.answerListener = new EventEmitter();
     this.lastQuestion = {};
@@ -509,7 +563,7 @@ export class GameBoard {
     });
   }
 
-  setState(message) {
+  setState(message: MoveRequest): void {
     this.stack.move(
       {
         player: message.player,
@@ -517,10 +571,10 @@ export class GameBoard {
         index: message.index
       },
       {
-        player: message.moveplayer,
-        location: message.movelocation,
-        index: message.moveindex,
-        position: message.moveposition
+        player: message.moveplayer || message.player,
+        location: message.movelocation || message.location,
+        index: message.moveindex !== undefined ? message.moveindex : message.index,
+        position: message.position
       }
     );
     this.callback(this.generateView(), this.stack.cards());
@@ -528,24 +582,20 @@ export class GameBoard {
 
   /**
    * Set a username to a specific slot on lock in.
-   * @public
-   * @param {any} slot Index in names
-   * @param {any} username name of the player
-   * @returns {undefined}
    */
-  setNames(slot, username) {
+  setNames(slot: PLAYER, username: string): void {
     this.names[slot] = username;
   }
 
-  findUIDCollection(uid) {
+  findUIDCollection(uid: string): Pile {
     return getByUID(this.stack.cards(), uid);
   }
 
-  findUIDCollectionPrevious(uid) {
+  findUIDCollectionPrevious(uid: string): Pile {
     return getByUID(this.previousStack, uid);
   }
 
-  filterEdited(cards) {
+  filterEdited(cards: Pile[]): Pile[] {
     return cards.filter((card) => {
       const newCards = this.findUIDCollection(card.uid),
         oldCards = this.findUIDCollectionPrevious(card.uid) || {};
@@ -557,10 +607,8 @@ export class GameBoard {
 
   /**
    * Generate the view of the field, for use by YGOPro MSG_UPDATE_DATA to get counts.
-   * @param   {Number} player player int 0,1, etcthe given player
-   * @returns {Object} all the cards the given player can see on their side of the field.
    */
-  generateViewCount(player: PLAYER) {
+  generateViewCount(player: PLAYER): FieldViewCount {
     const playersCards = filterPlayer(this.stack.cards(), player),
       deck = filterlocation(playersCards, LOCATION.DECK),
       hand = filterlocation(playersCards, LOCATION.HAND),
@@ -569,7 +617,8 @@ export class GameBoard {
       security = filterlocation(playersCards, LOCATION.SECURITY),
       breedingzone = filterlocation(playersCards, LOCATION.BREEDINGZONE),
       battlezone = filterlocation(playersCards, LOCATION.BATTLEZONE),
-      onfield = filterlocation(playersCards, LOCATION.ONFIELD);
+      onfield = filterlocation(playersCards, LOCATION.ONFIELD),
+      inmaterial = filterlocation(playersCards, LOCATION.INMATERIAL);
 
     return {
       DECK: deck.length,
@@ -579,15 +628,14 @@ export class GameBoard {
       SECURITY: security.length,
       BREEDINGZONE: breedingzone.length,
       BATTLEZONE: battlezone.length,
-      ONFIELD: onfield.length
+      ONFIELD: onfield.length,
+      INMATERIAL: inmaterial.length
     };
   }
   /**
    * Generate the view of the field, for use by YGOPro MSG_UPDATE_DATA to update data.
-   * @param   {Number} player player int 0,1, etcthe given player
-   * @returns {Object} all the cards the given player can see on their side of the field.
    */
-  generateUpdateView(player: PLAYER) {
+  generateUpdateView(player: PLAYER): FieldView {
     const playersCards = filterPlayer(this.stack.cards(), player),
       deck = filterlocation(playersCards, LOCATION.DECK),
       hand = filterlocation(playersCards, LOCATION.HAND),
@@ -596,7 +644,8 @@ export class GameBoard {
       security = filterlocation(playersCards, LOCATION.SECURITY),
       breedingzone = filterlocation(playersCards, LOCATION.BREEDINGZONE),
       battlezone = filterlocation(playersCards, LOCATION.BATTLEZONE),
-      onfield = filterlocation(playersCards, LOCATION.ONFIELD);
+      onfield = filterlocation(playersCards, LOCATION.ONFIELD),
+      inmaterial = filterlocation(playersCards, LOCATION.INMATERIAL);
 
     return {
       DECK: deck.sort(sortByIndex),
@@ -606,16 +655,15 @@ export class GameBoard {
       SECURITY: security.sort(sortByIndex),
       BREEDINGZONE: breedingzone.sort(sortByIndex),
       BATTLEZONE: battlezone.sort(sortByIndex),
-      ONFIELD: onfield.sort(sortByIndex)
+      ONFIELD: onfield.sort(sortByIndex),
+      INMATERIAL: inmaterial.sort(sortByIndex)
     };
   }
 
   /**
    * Generate the view for a specific given player
-   * @param   {Number} player player int 0,1, etcthe given player
-   * @returns {Object} all the cards the given player can see on their side of the field.
    */
-  generateSinglePlayerView(player: PLAYER) {
+  generateSinglePlayerView(player: PLAYER): FieldView {
     const playersCards = this.filterEdited(
         filterPlayer(JSON.parse(JSON.stringify(this.stack.cards())), player)
       ),
@@ -626,7 +674,6 @@ export class GameBoard {
       security = filterlocation(playersCards, LOCATION.SECURITY),
       breedingzone = filterlocation(playersCards, LOCATION.BREEDINGZONE),
       battlezone = filterlocation(playersCards, LOCATION.BATTLEZONE),
-      excavated = filterlocation(playersCards, LOCATION.EXCAVATED),
       inmaterial = filterlocation(playersCards, LOCATION.INMATERIAL),
       onfield = filterlocation(playersCards, LOCATION.ONFIELD);
 
@@ -638,7 +685,6 @@ export class GameBoard {
       SECURITY: security,
       BREEDINGZONE: breedingzone,
       BATTLEZONE: battlezone,
-      EXCAVATED: excavated,
       INMATERIAL: inmaterial,
       ONFIELD: onfield
     };
@@ -646,10 +692,8 @@ export class GameBoard {
 
   /**
    * Generate the view for a spectator or opponent
-   * @param   {Number} player player int 0,1, etcthe given player
-   * @returns {Object} all the cards the given spectator/opponent can see on that side of the field.
    */
-  generateSinglePlayerSpectatorView(player: PLAYER) {
+  generateSinglePlayerSpectatorView(player: PLAYER): FieldView {
     const playersCards = this.filterEdited(
         filterPlayer(JSON.parse(JSON.stringify(this.stack.cards())), player)
       ),
@@ -660,7 +704,6 @@ export class GameBoard {
       security = filterlocation(playersCards, LOCATION.SECURITY),
       breedingzone = filterlocation(playersCards, LOCATION.BREEDINGZONE),
       battlezone = filterlocation(playersCards, LOCATION.BATTLEZONE),
-      excavated = filterlocation(playersCards, LOCATION.EXCAVATED),
       inmaterial = filterlocation(playersCards, LOCATION.INMATERIAL),
       onfield = filterlocation(playersCards, LOCATION.ONFIELD);
 
@@ -668,46 +711,40 @@ export class GameBoard {
       DECK: hideViewOfZone(deck),
       HAND: hideHand(hand),
       TRASH: trash,
-      EGG: hideViewOfExtra(egg, false),
+      EGG: hideViewOfExtra(egg),
       SECURITY: hideViewOfZone(security),
       BREEDINGZONE: hideViewOfZone(breedingzone),
       BATTLEZONE: hideViewOfZone(battlezone),
-      EXCAVATED: hideViewOfZone(excavated),
       INMATERIAL: inmaterial,
-      onfield: onfield
+      ONFIELD: onfield
     };
   }
 
   /**
    * Generate a full view of the field for a spectator.
-   * @returns {Pile[]} complete view of the current field based on the stack.
    */
-  generateSpectatorView() {
+  generateSpectatorView(): FieldView[] {
     return [this.generateSinglePlayerSpectatorView(0), this.generateSinglePlayerSpectatorView(1)];
   }
 
   /**
    * Generate a full view of the field for a Player 1.
-   * @returns {Pile[]} complete view of the current field based on the stack.
    */
-  generatePlayer1View() {
+  generatePlayer1View(): FieldView[] {
     return [this.generateSinglePlayerView(0), this.generateSinglePlayerSpectatorView(1)];
   }
 
   /**
    * Generate a full view of the field for a Player 2.
-   * @returns {Pile[]} complete view of the current field based on the stack.
    */
-  generatePlayer2View() {
+  generatePlayer2View(): FieldView[] {
     return [this.generateSinglePlayerSpectatorView(0), this.generateSinglePlayerView(1)];
   }
 
   /**
    * Generate a full view of the field for all view types.
-   * @param {string} action callback case statement this should trigger, defaults to 'game'.
-   * @returns {Object} complete view of the current field based on the stack for every view type.
    */
-  generateView(action = '') {
+  generateView(action = ''): UIPayload {
     if (action === 'start') {
       this.previousStack = [];
     }
@@ -716,14 +753,12 @@ export class GameBoard {
       p0: {
         gameAction: action || 'game',
         info: this.state,
-        field: this.generatePlayer1View(),
-        player: 0
+        field: this.generatePlayer1View()
       },
       p1: {
         gameAction: action || 'game',
         info: this.state,
-        field: this.generatePlayer2View(),
-        player: 1
+        field: this.generatePlayer2View()
       },
       spectator: {
         gameAction: action || 'game',
@@ -735,21 +770,21 @@ export class GameBoard {
     return output;
   }
 
-  gameUpdate() {
+  gameUpdate(): void {
     this.callback(this.generateView(), this.stack.cards());
   }
 
   /**
    * Creates a new card outside of initial start
-   * @param {String} location     zone the card can be found in.
-   * @param {Number} controller   player the card can be found under
-   * @param {Number} sequence     exact index of card in the zone
-   * @param {Number} position     position the card needs to be in
-   * @param {Number} code         passcode
-   * @param {Number} index        index/sequence in the zone the card needs to become.
-   * @returns {undefined}
    */
-  makeNewCard(location, controller, sequence, position, code, index) {
+  makeNewCard(
+    location: LOCATION,
+    controller: PLAYER,
+    sequence: number,
+    position: string,
+    code: string,
+    index: number
+  ): Pile {
     const card = this.stack.add(location, controller, sequence, code);
     this.callback(this.generateView('newCard'), this.stack.cards());
 
@@ -758,35 +793,22 @@ export class GameBoard {
 
   /**
    * Finds a specific card and puts a counter on it.
-   * @param {FieldCoordinate} query info to find the card
-   * @param {String} type name of the counter
-   * @param {Number} amount how many counters to add
-   * @returns {undefined}
    */
-  addCounter(query, type, amount) {
+  addCounter(query: Query, type: string, amount: number): void {
     this.field.addCounter(query, type, amount);
   }
 
   /**
    * Finds a specific card and remove a counter from it.
-   * @param {FieldCoordinate} query info to find the card
-   * @param {String} type name of the counter
-   * @param {Number} amount how many counters to add
-   * @return {undefined}
    */
-  removeCounter(query, type, amount) {
+  removeCounter(query: Query, type: string, amount: number): void {
     this.field.addCounter(query, type, -1 * amount);
   }
 
   /**
    * Draws a card, updates state.
-   * @param {Number} player           player indicator 0,1, etc       Player drawing the cards
-   * @param {Number} numberOfCards    number of cards drawn
-   * @param {Number[]} cards          passcodes of drawn cards
-   * @param {Function} drawCallback   callback used by automatic
-   * @returns {undefined}
    */
-  drawCard(player, numberOfCards) {
+  drawCard(player: PLAYER, numberOfCards: number): void {
     const currenthand = filterlocation(filterPlayer(this.stack.cards(), player), LOCATION.HAND).length;
     let topcard;
     let deck;
@@ -814,7 +836,7 @@ export class GameBoard {
     this.callback(this.generateView(), this.stack.cards());
   }
 
-  recover(player, numberOfCards) {
+  recover(player: PLAYER, numberOfCards: number): void {
     const security = filterlocation(filterPlayer(this.stack.cards(), player), LOCATION.SECURITY).length;
     let topcard;
     let deck;
@@ -842,14 +864,10 @@ export class GameBoard {
 
   /**
    * Triggers a callback that reveals the given array of cards to end users.
-   * @param {Pile[]} reference reveal array of cards
-   * @param {Number} player player int 0,1, etc
-   * @param {function} call second callback
-   * @returns {undefined}
    */
-  revealCallback(reference, player, call) {
+  revealCallback(cards: Pile[], player: PLAYER, call: any): void {
     const reveal: Pile[] = [];
-    reference.forEach(function (card, index) {
+    cards.forEach(function (card, index): void {
       reveal.push(Object.assign({}, card));
       reveal[index].position = 'Unsuspended'; // make sure they can see the card and all data on it.
     });
@@ -869,7 +887,7 @@ export class GameBoard {
           call: call,
           player: player
         },
-        sepectators: {
+        spectator: {
           gameAction: 'reveal',
           info: this.state,
           reveal: reveal,
@@ -881,18 +899,14 @@ export class GameBoard {
     );
   }
 
-  getField(player: PLAYER) {
+  getField(player: PLAYER): Field {
     return this.generateView('start')['p' + player].field;
   }
 
   /**
    * Exposed method to initialize the field; You only run this once.
-   * @param {Object} player1 player instance
-   * @param {Object} player2 player instance
-   * @param {Boolean} manual if using manual, or automatic
-   * @returns {undefined}
    */
-  load(player1, player2) {
+  load(player1: Deck, player2: Deck): void {
     this.state.memory = 0;
 
     player1.main.forEach((card, index) => {
@@ -916,26 +930,23 @@ export class GameBoard {
 
   /**
    * moves game to next phase.
-   * @param {Number} phase enumeral
-   * @returns {undefined}
    */
-  nextPhase(phase) {
+  nextPhase(phase): void {
     this.state.phase = phase;
     this.callback(this.generateView(), this.stack.cards());
   }
 
   /**
    * Shifts the game to the start of the next turn and shifts the active player.
-   * @returns {undefined}
    */
-  nextTurn() {
+  nextTurn(): void {
     this.state.turn += 1;
     this.state.phase = 0;
     this.state.turnOfPlayer = this.state.turnOfPlayer === 0 ? 1 : 0;
     this.callback(this.generateView(), this.stack.cards());
   }
 
-  announcement(player, message) {
+  announcement(player: PLAYER, message: Announcement): void {
     const slot = 'p' + player,
       output = {
         names: this.names,
@@ -951,27 +962,23 @@ export class GameBoard {
   }
 
   /**
-   * Change lifepoints of a player
-   * @param {Number} player player int 0,1, etcplayer to edit
-   * @param {Number} amount amount of lifepoints to take or remove.
-   * @param {String} username name of player being viewed.
-   * @return {undefined}
+   * Change memory gague
    */
-  changeLifepoints(player, amount) {
+  changeMemory(player: PLAYER, amount: number) {
     this.state.memory = player ? this.state.memory + amount : this.state.memory - amount;
     this.callback(this.generateView(), this.stack.cards());
   }
 
   /**
    * Send a question to the player
-   * @param {Number} player player
-   * @param {String} type question typing
-   * @param {Object[]} options information about the question
-   * @param {Number} answerLength how many answers
-   * @param {Function} onAnswerFromUser callback function
-   * @return {undefined}
    */
-  question(player, type, options, answerLength, onAnswerFromUser) {
+  question(
+    player: PLAYER,
+    type: string,
+    options: any[],
+    answerLength: number,
+    onAnswerFromUser: Function
+  ) {
     // Create a mock view to populate with information so it gets sent to the right place.
 
     const slot = 'p' + player;
@@ -1009,14 +1016,12 @@ export class GameBoard {
 
   /**
    * Answer a queued up question
-   * @param {Object} message response message
-   * @returns {undefined}
    */
-  respond(message) {
+  respond(message: any): void {
     this.answerListener.emit(message.uuid, message.answer);
   }
 
-  retryLastQuestion() {
+  retryLastQuestion(): void {
     console.log(
       'retrying',
       this.lastQuestion.slot,
