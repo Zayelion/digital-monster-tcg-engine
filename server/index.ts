@@ -1,96 +1,137 @@
-// Gamelist object acts similar to a Redis server, could be replaced with on but its the gamelist state.
-"use strict";
+import { fork } from 'child_process';
+import * as logger from './logger';
+import { WebSocketServer, WebSocket } from 'ws';
+import { Deck } from './core/lib_validate_deck';
+import { ChildProcess } from 'child_process';
+import { GameState } from './core/core';
+import { validate, validateSession } from './endpoint_users';
+import { saveDeck, deleteDeck } from './endpoint_decks';
+import { logDuel } from './endpoint_services';
 
-/**
- * @typedef CardRecord
- * @type {Object}
- * @property {Number} id passcode of the card.
- */
+interface Client extends WebSocket {
+  id?: string;
+  username?: string;
+  session?: string;
+}
 
-// Mostly just stuff so that Express runs
-const child_process = require("child_process"),
-  logger = require("./logger"),
-  cardIDMap = {}, ///require('../http/public/cardidmap.js'),
-  userController = require("./endpoint_users.js"),
-  decks = require("./endpoint_decks.js"),
-  Rooms = require("rooms"),
-  services = require("./endpoint_services"),
-  uuid = require("uuid").uuid4,
-  sanitize = require("./lib_html_sanitizer.js"),
-  { log } = logger.create(logger.config.main, "[INDEX]"),
-  { log: debug } = logger.create(logger.config.debug, "[DEBUG]"),
-  { log: logError } = logger.create(logger.config.error, "[ERROR]"),
+class ClientMessage {
+  target: string;
+  from: string;
+  roompass: string;
+  session: string;
+  username: string;
+  action: string;
+  info: {};
+  deck?: Deck;
+
+  constructor(message: any) {
+    this.target = message.target;
+    this.from = message.from;
+    this.roompass = message.roompass;
+    this.session = message.session;
+    this.username = message.username;
+    this.action = message.action;
+    this.info = message.info;
+    this.deck = message.deck;
+  }
+}
+
+type ServerMessage = {};
+
+export type CoreMessage = {
+  action: string;
+  game: GameState;
+  roompass: string;
+  port: number;
+  username: string;
+  session: string;
+};
+
+const 
+  
+  { log } = logger.create(logger.config.main, '[INDEX]'),
+  { log: debug } = logger.create(logger.config.debug, '[DEBUG]'),
+  { log: logError } = logger.create(logger.config.error, '[ERROR]'),
   gamelist = {},
   gamePorts = {};
 
-let chatbox = [],
-  userlist = [],
-  wsServer,
-  acklevel = 0,
-  currentGlobalMessage = "";
-
-/**
- * Maps a deck to updated IDs.
- * @param   {CardRecord[]} deck A deck of cards from the user possibly containing old cards.
- * @returns {CardRecord[]} A deck of cards from the user.
- */
-function mapCards(deck) {
-  return deck.map(function (cardInDeck) {
-    return cardIDMap[cardInDeck.id]
-      ? {
-          id: cardIDMap[cardInDeck.id],
-        }
-      : cardInDeck;
-  });
-}
+let userlist = [],
+  wsServer: WebSocketServer,
+  acklevel = 0;
 
 /**
  * Server wide client onmessage Event
- * @param {Object} announcement structured message for the client
- * @returns {undefined}
  */
-function announce(announcement) {
-  wsServer.write(announcement);
+function announce(announcement: ServerMessage): void {
+  wsServer.clients.forEach((client: WebSocket) => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(announcement);
+    }
+  });
 }
 
 /**
  * Request that ever client respond and say it is connected.
- * @returns {undefined}
  */
-function massAck() {
+function sendMassAck(): void {
   acklevel = 0;
   userlist = [];
   announce({
-    clientEvent: "ack",
-    serverEvent: "ack",
+    clientEvent: 'ack',
+    serverEvent: 'ack'
   });
 }
 
-function unsafePort() {
-  const minPort = process.env.PORT_RANGE_MIN
-      ? Number(process.env.PORT_RANGE_MIN)
-      : 2000,
-    maxPort = process.env.PORT_RANGE_MAX
-      ? Number(process.env.PORT_RANGE_MAX)
-      : 9000;
+/**
+ * Send out updates about the user count.
+ */
+function sendAckResult(socket?: Client): void {
+  const message = {
+    clientEvent: 'ackresult',
+    ackresult: acklevel,
+    userlist: userlist
+  };
+
+  socket ? socket.send(message) : announce(message);
+}
+
+/**
+ * Send out updates to the game list
+ */
+function sendGameList(socket?: Client): void {
+  const message = {
+    clientEvent: 'gamelist',
+    gamelist,
+    ackresult: acklevel,
+    userlist: userlist
+  };
+
+  socket ? socket.send(message) : announce(message);
+}
+
+/**
+ * Pick a port to use
+ */
+function getUnsafePort(): number {
+  const minPort = process.env.PORT_RANGE_MIN ? Number(process.env.PORT_RANGE_MIN) : 2000,
+    maxPort = process.env.PORT_RANGE_MAX ? Number(process.env.PORT_RANGE_MAX) : 9000;
 
   return Math.floor(Math.random() * (maxPort - minPort) + minPort);
 }
 
-function registrationCall(data, socket) {
-  userController.validate(true, data, function (error, valid, responseData) {
+/**
+ * Login a user using username and password.
+ */
+function loginUser(socket: Client, data: ClientMessage): void {
+  validate(true, data, function (error, valid, responseData) {
     if (error) {
       logError(error);
-      socket.write({
-        clientEvent: "servererror",
-        message: currentGlobalMessage,
-      });
-      socket.write({
-        clientEvent: "login",
+      socket.send({
+        clientEvent: 'login',
         info: {
-          message: error.message,
+          message: error.message
         },
-        error: error,
+        error: error
       });
       return;
     }
@@ -101,22 +142,12 @@ function registrationCall(data, socket) {
       socket.username = info.username;
 
       socket.session = info.session;
-      socket.admin = info.role.name === "Administrator";
       log(`${socket.username} has logged in`.bold);
-      socket.write({
-        clientEvent: "global",
-        message: currentGlobalMessage,
-        admin: info.role.name === "Administrator",
-      });
-      socket.write({
-        clientEvent: "ackresult",
-        ackresult: acklevel,
-        userlist: userlist,
-      });
 
-      socket.speak = true;
-      socket.write({
-        clientEvent: "login",
+      sendAckResult(socket);
+      sendGameList(socket);
+      socket.send({
+        clientEvent: 'login',
         info: {
           username: info.username,
           decks: info.decks,
@@ -127,333 +158,290 @@ function registrationCall(data, socket) {
           admin: info.admin,
           rewards: info.rewards,
           settings: info.settings,
-          bans: info.bans,
-        },
-        chatbox: chatbox,
-      });
-      socket.join(socket.username);
-      announce({
-        clientEvent: "gamelist",
-        gamelist,
-        ackresult: acklevel,
-        userlist: userlist,
-      });
-      return;
-    }
-
-    socket.write({
-      clientEvent: "servererror",
-      message: currentGlobalMessage,
-    });
-
-    socket.write({
-      clientEvent: "login",
-      info: info,
-    });
-  });
-}
-
-function globalRequested(socket) {
-  socket.write({
-    clientEvent: "global",
-    message: currentGlobalMessage,
-  });
-}
-
-function genocideCall(data) {
-  userController.validate(false, data, function (error, info, body) {
-    if (error) {
-      return;
-    }
-    if (info.data && info.success && info.data.g_access_cp === "1") {
-      announce({
-        clientEvent: "genocide",
-        message: data.message,
-      });
-      return;
-    }
-
-    log(data, "asked for genocide");
-  });
-}
-
-
-function childHandler(child, socket, message) {
-  switch (message.action) {
-    case "lobby":
-      gamelist[message.game.roompass] = message.game;
-      announce({
-        clientEvent: "gamelist",
-        gamelist,
-        ackresult: acklevel,
-        userlist: userlist,
-      });
-      break;
-    case "stop":
-      delete gamelist[message.game.roompass];
-      announce({
-        clientEvent: "gamelist",
-        gamelist,
-        ackresult: acklevel,
-        userlist: userlist,
-      });
-      break;
-    case "ready":
-      announce({
-        clientEvent: "gamelist",
-        gamelist,
-        ackresult: acklevel,
-        userlist: userlist,
-      });
-      socket.write({
-        clientEvent: "lobby",
-        roompass: message.roompass,
-        port: message.port,
-      });
-      break;
-    case "register":
-      userController.validateSession(
-        {
-          session: message.session,
-          username: message.username,
-        },
-        function (error, valid, person) {
-          child.send({
-            action: "register",
-            error,
-            person,
-            session: message.session,
-            valid,
-          });
+          bans: info.bans
         }
-      );
-      break;
+      });
 
-    case "quit":
-      delete gamelist[message.game.roompass];
-      delete gamePorts[message.game.port];
-      announce({
-        clientEvent: "gamelist",
-        gamelist,
-        ackresult: acklevel,
-        userlist: userlist,
-      });
-      break;
-    case "win":
-      services.logDuel(message, function () {
-        child.send({
-          action: "kill",
-        });
-      });
-      break;
+      return;
+    }
+
+    socket.send({
+      clientEvent: 'login',
+      info: info
+    });
+  });
+}
+
+/**
+ * Send a game request user to user
+ */
+function sendGameRequest(data: ClientMessage): void {
+  announce({
+    clientEvent: 'duelrequest',
+    target: data.target,
+    from: data.from,
+    roompass: data.roompass
+  });
+}
+
+/**
+ * Process an ack response
+ */
+function processAckResponse(socket: Client): void {
+  acklevel += 1;
+  if (socket.username) {
+    userlist.push(socket.username);
   }
 }
 
-function onData(data, socket) {
-  var action, save;
-  data = data || {} as any;
-  action = data.action;
-  save = false;
-  if (socket.readyState !== wsServer.Spark.CLOSED) {
-    save = true;
-  }
-  if (save === false) {
+/**
+ * Load a user session, send them their decks.
+ */
+function loadSession(socket: Client, data: ClientMessage): void {
+  validateSession(
+    {
+      session: data.session,
+      username: data.username
+    },
+    function (error, valid, info) {
+      if (error || !valid) {
+        return;
+      }
+      socket.username = info.username;
+      socket.session = data.session;
+      log(`${socket.username} has rejoined session!`.bold);
+
+      sendAckResult();
+      socket.send({
+        clientEvent: 'login',
+        info: {
+          username: info.username,
+          decks: info.decks,
+          friends: info.friends,
+          session: data.session,
+          admin: info.admin,
+          rewards: info.rewards,
+          settings: info.settings,
+          bans: info.bans
+        }
+      });
+    }
+  );
+}
+
+/**
+ * Host a game
+ */
+function host(socket: Client, message: ClientMessage): void {
+  const port = getUnsafePort(),
+    execArgv = process.env.CORE_DEBUG ? [`--inspect=${getUnsafePort()}`] : undefined,
+    child = fork('./core/index.js', process.argv, {
+      cwd: __dirname,
+      env: Object.assign({}, process.env, message.info, { PORT: port }),
+      execArgv
+    });
+  child.on('message', function (data): void {
+    const message = data as CoreMessage;
+    onCoreMessage(child, socket, message);
+  });
+  gamePorts[port] = child;
+}
+
+/**
+ * Save a deck
+ */
+function deckSave(socket: Client, message: ClientMessage): void {
+  if (!socket.username) {
+    log('no user cant save');
     return;
   }
+  delete message.action;
+  message.deck.owner = socket.username;
+  message.username = socket.username;
+  log(message);
+  saveDeck(socket.session, message.deck, socket.username, function (error, savedDecks) {
+    socket.send({
+      clientEvent: 'savedDeck',
+      error,
+      savedDecks
+    });
+  });
+}
 
-  socket.join(socket.address.ip + data.uniqueID);
-  switch (action) {
-    case "duelrequest":
-      announce({
-        clientEvent: "duelrequest",
-        target: data.target,
-        from: data.from,
-        roompass: data.roompass,
+/**
+ * Delete a deck.
+ */
+function deckDelete(socket: Client, message: ClientMessage): void {
+  if (!socket.username) {
+    return;
+  }
+  deleteDeck(socket.session, message.deck.id, socket.username, function (error, savedDecks) {
+    socket.send({
+      clientEvent: 'deletedDeck',
+      error,
+      savedDecks,
+      id: message.deck.id
+    });
+  });
+}
+
+/**
+ * Update the gamelist that there was a state update in the lobby.
+ */
+function lobby(message: CoreMessage): void {
+  gamelist[message.game.roompass] = message.game;
+  sendGameList();
+}
+
+/**
+ * Stop the game, and give the server time to wind down.
+ */
+function stop(message: CoreMessage): void {
+  delete gamelist[message.game.roompass];
+  sendGameList();
+}
+
+/**
+ * Update the gamelist that the game is in a ready state.
+ */
+function ready(socket: Client, message: CoreMessage) {
+  sendGameList();
+  socket.send({
+    clientEvent: 'lobby',
+    roompass: message.roompass,
+    port: message.port
+  });
+}
+
+/**
+ * Check that the person connecting to the core is registered to the server and get their saved deck.
+ */
+function register(child: ChildProcess, message): void {
+  validateSession(
+    {
+      session: message.session,
+      username: message.username
+    },
+    function (error, valid, person) {
+      child.send({
+        action: 'register',
+        error,
+        person,
+        session: message.session,
+        valid
       });
+    }
+  );
+}
 
-      break;
-    case "ai":
-      if (socket.username && socket.aiReady) {
-        log(socket.username, "requested AI Duel");
-        announce({
-          clientEvent: "duelrequest",
-          target: "SnarkyChild",
-          from: socket.username,
-          roompass: data.roompass,
-          deck: data.deck,
-        });
-        socket.aiReady = false;
-        setTimeout(function () {
-          socket.aiReady = true;
-        }, 10000);
-      }
-      break;
+/**
+ * When a game ends remove it from the gamelist
+ */
+function quit(game: GameState): void {
+  delete gamelist[game.roompass];
+  delete gamePorts[game.port];
+  sendGameList();
+}
 
-    case "ack":
-      acklevel += 1;
-      if (data.name) {
-        userlist.push(data.name);
-      }
-      break;
-    case "register":
-      registrationCall(data, socket);
-      break;
-    case "loadSession":
-      userController.validateSession(
-        {
-          session: data.session,
-          username: data.username,
-        },
-        function (error, valid, info) {
-          if (error || !valid) {
-            return;
-          }
-          socket.username = info.username;
-          log(`${socket.username} has rejoined session!`.bold);
-          socket.session = data.session;
+/**
+ * When the core declares a win log the duel and kill the process
+ */
+function win(child: ChildProcess, message: CoreMessage) {
+  logDuel(message, function () {
+    child.send({
+      action: 'kill'
+    });
+  });
+}
 
-          socket.write({
-            clientEvent: "ackresult",
-            ackresult: acklevel,
-            userlist: userlist,
-          });
-          socket.speak = true;
-          socket.write({
-            clientEvent: "login",
-            info: {
-              username: info.username,
-              decks: info.decks,
-              friends: info.friends,
-              session: data.session,
-              admin: info.admin,
-              rewards: info.rewards,
-              settings: info.settings,
-              bans: info.bans,
-            },
-            chatbox: chatbox,
-          });
-          socket.join(socket.username);
-        }
-      );
+/**
+ * Analyze message from child instance and take appropriate action
+ */
+function onCoreMessage(child: ChildProcess, socket: Client, message: CoreMessage) {
+  switch (message.action) {
+    case 'lobby':
+      lobby(message);
       break;
+    case 'stop':
+      stop(message);
+      break;
+    case 'ready':
+      ready(socket, message);
+      break;
+    case 'register':
+      register(child, message);
+      break;
+    case 'quit':
+      quit(message.game);
+      break;
+    case 'win':
+      win(child, message);
+      break;
+  }
+}
 
-    case "globalrequest":
-      globalRequested(socket);
+/**
+ * Analyze message from websocket client and take appropriate action
+ */
+function onMessage(socket: Client, message: ClientMessage) {
+  switch (message.action) {
+    case 'duelrequest':
+      sendGameRequest(message);
       break;
-
-    case "host":
-      const port = unsafePort(),
-        execArgv = process.env.CORE_DEBUG
-          ? [`--inspect=${unsafePort()}`]
-          : undefined,
-        child = child_process.fork("./core/index.js", process.argv, {
-          cwd: __dirname,
-          env: Object.assign({}, process.env, data.info, { PORT: port }),
-          execArgv,
-        });
-      child.on("message", function (message) {
-        childHandler(child, socket, message);
-      });
-      gamePorts[port] = child;
+    case 'ack':
+      processAckResponse(socket);
       break;
-    case "privateMessage":
-      if (socket.username) {
-        data.date = new Date();
-        wsServer.room(data.to).write(data);
-      }
+    case 'register':
+      loginUser(socket, message);
       break;
-    case "save":
-      if (!socket.username) {
-        log("no user cant save");
-        return;
-      }
-      delete data.action;
-      data.deck.main = mapCards(data.deck.main);
-      data.deck.side = mapCards(data.deck.side);
-      data.deck.extra = mapCards(data.deck.extra);
-      data.deck.owner = socket.username;
-      data.username = socket.username;
-      log(data);
-      decks.saveDeck(
-        socket.session,
-        data.deck,
-        socket.username,
-        function (error, savedDecks) {
-          wsServer.room(socket.address.ip + data.uniqueID).write({
-            clientEvent: "savedDeck",
-            error,
-            savedDecks,
-          });
-        }
-      );
-
+    case 'loadSession':
+      loadSession(socket, message);
       break;
-    case "delete":
-      if (!socket.username) {
-        return;
-      }
-      decks.deleteDeck(
-        socket.session,
-        data.deck.id,
-        socket.username,
-        function (error, savedDecks) {
-          wsServer.room(socket.address.ip + data.uniqueID).write({
-            clientEvent: "deletedDeck",
-            error,
-            savedDecks,
-            id: data.deck.id,
-          });
-        }
-      );
+    case 'host':
+      host(socket, message);
+      break;
+    case 'save':
+      deckSave(socket, message);
+      break;
+    case 'delete':
+      deckDelete(socket, message);
       break;
     default:
       return;
   }
 }
 
-function onPrimusData(socket, data) {
-  try {
-    socket.write({
-      clientEvent: "gamelist",
-      gamelist,
-      ackresult: acklevel,
-      userlist: userlist,
-    });
-    onData(data, socket);
-  } catch (error) {
-    logError(error);
-  }
-}
-
-function onPrimusConnection(socket) {
-  socket.on("data", function (data) {
-    onPrimusData(socket, data);
+/**
+ *Action to take on new websocket connection
+ */
+function onConnection(socket: Client): void {
+  socket.on('data', function (data) {
+    if (socket.readyState !== socket.OPEN) {
+      return;
+    }
+    try {
+      const message = new ClientMessage(data);
+      sendGameList(socket);
+      onMessage(socket, message);
+    } catch (error) {
+      logError(error);
+    }
   });
 }
 
-function start() {
-  
-  wsServer = new Primus(primusServer, {
-    parser: "JSON",
+/**
+ * Iniate gamelist server
+ */
+export default function start(): NodeJS.Timer {
+  wsServer = new WebSocketServer({
+    port: 8080
   });
 
-  wsServer.plugin("rooms", Rooms);
-  wsServer.on("connection", onPrimusConnection);
+  wsServer.on('connection', onConnection);
 
-  setInterval(function () {
-    announce({
-      clientEvent: "ackresult",
-      ackresult: acklevel,
-      userlist: userlist,
-    });
-    announce({
-      clientEvent: "gamelist",
-      gamelist,
-      ackresult: acklevel,
-      userlist: userlist,
-    });
-    massAck();
+  return setInterval(function (): void {
+    sendAckResult();
+    sendGameList();
+    sendMassAck();
   }, 15000);
 }
-
-module.exports = start;

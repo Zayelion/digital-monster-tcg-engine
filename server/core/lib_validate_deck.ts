@@ -4,6 +4,8 @@ export type Deck = {
   main: number[];
   egg: number[];
   side: number[];
+  owner?: string;
+  id?: string;
 };
 
 type MappedDeck = {
@@ -233,7 +235,7 @@ export function validateDeck(
     checkAmounts(main, side, egg, search);
     checkBanlist(main, side, egg, banlist, search);
     checkRegion(main, side, egg, banlist, cardpool, search);
-    
+
     return {
       error: null,
       valid: true

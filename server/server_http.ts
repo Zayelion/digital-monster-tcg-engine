@@ -63,10 +63,10 @@ function systemLoad(req, res, next) {
 }
 
 function gitRoute(req, res, next) {
-    child_process.spawn('git', ['pull'], {}, function () {
+    ChildProcess.spawn('git', ['pull'], {}, function () {
         console.log('Finished running git');
     });
-    child_process.fork('./src/updater/banlist.js');
+    ChildProcess.fork('./src/updater/banlist.js');
 }
 
 

@@ -1,6 +1,9 @@
 // You should be drinking scotch and listening to german electronica while reading this.
 
+import EventEmitter from 'events';
+import { v4 } from 'uuid';
 import { Deck } from './lib_validate_deck';
+
 
 type FieldView = {
   DECK: Pile[];
@@ -80,10 +83,7 @@ export type MoveRequest = {
 };
 
 export type UICallback = (view: UIPayload, payload: Pile[]) => void;
-
-const EventEmitter = require('events'), // a way to "notice" things occuring
-  uniqueIdenifier = require('uuid/v4'); // time based unique identifier, RFC4122 version 1
-
+ 
 /**
  * Sort function, sorts by card index
  */
@@ -241,7 +241,7 @@ class Field {
    * Add a new card to the field. Creates it from thin air.
    */
   add(location: LOCATION, player: PLAYER, index: number, code = 'unknown'): Pile {
-    const uuid = uniqueIdenifier();
+    const uuid = v4();
     const card = new Pile(location, player, index, uuid, code);
     this.stack.push(card);
     return card;
@@ -982,7 +982,7 @@ export class GameBoard {
     // Create a mock view to populate with information so it gets sent to the right place.
 
     const slot = 'p' + player;
-    const uuid = uniqueIdenifier(),
+    const uuid = v4(),
       output = {
         names: this.names,
         p0: {},
