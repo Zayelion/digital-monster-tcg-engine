@@ -11,7 +11,7 @@ export default function DownloadsPage() {
                     target= '_blank'
                     key= 'chrome-extension-dl' rel="noreferrer"
                 >Chrome Extension for Images</a>,
-                answer: 'Host local images from your browser, YGOSalvation looks for the images on port 8887'
+                answer: 'Host local images from your browser, Digimon TCG Engine looks for the images on port 8887'
             }
             ]
         }

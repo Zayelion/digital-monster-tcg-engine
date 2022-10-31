@@ -1,12 +1,12 @@
 import Screen from '../../components/screens/screen';
-import GamelistScreen  from './../../components/screens/gamelist.component';
-import { React } from 'react';
+import DeckEditScreen from './../../components/screens/deckedit.component';
+import React  from 'react';
 
 
 export default function DeckEditer() {
     return (
         <Screen>
-            <GamelistScreen />,
+            <DeckEditScreen />,
         </Screen>
     );
 }

@@ -19,7 +19,7 @@ body {
     background-attachment: fixed;
     background-repeat: no-repeat;
     background-color: black;
-    background-image: url(../public/img/magimagipinkshadow2.jpg);
+    /* background-image: url(../public/img/magimagipinkshadow2.jpg); */
     background-size: cover;
     font-family: 'Roboto', sans-serif;
     font-size: 2vh;
@@ -40,7 +40,7 @@ body.unlogged {
     animation-direction: alternate-reverse;
 }
 
-@keyframes lightshow {
+/* @keyframes lightshow {
     0% {
         background-image: url(../public/img/magimagipinkshadow2.jpg);
     }
@@ -53,7 +53,7 @@ body.unlogged {
     100% {
         background-image: url(../public/img/magimagipinkshadow2.jpg);
     }
-}
+} */
 
 #logo {
     margin-top: -35px;
@@ -901,7 +901,7 @@ meter.p0time, meter.p1time {
     transform: rotate3d(1, 0, 0, 30deg);
     perspective-origin: 0;
     margin: 0 auto;
-    background-image: url(../public/img/textures/newfield.png);
+    /* background-image: url(../public/img/textures/newfield.png); */
     background-size: 100% 100%;
     background-repeat: no-repeat;
     background-position: center;

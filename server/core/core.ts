@@ -1051,7 +1051,7 @@ export function main(configuration, callback) {
       port: game.port
     }),
     state: ServerState = new ServerState(),
-    title: string = `YGOSalvation Core on port: ${game.port} pid: ${core.pid}`;
+    title: string = `Digimon TCG Engine Core on port: ${game.port} pid: ${core.pid}`;
 
   core.title = title;
 

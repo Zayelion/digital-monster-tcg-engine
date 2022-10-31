@@ -7,7 +7,7 @@ export default function FAQsScreen () {
                 group: 'Basics',
                 questions: [{
                     question: 'Is this YGOPro?',
-                    answer: 'Technically. YGOSalvation is a team fork of YGOPro DevPro which is a software and team fork of an older version of YGOPro Dawn of a New Era, which is a software wrapper of YGOPro Percy, which is a fork of YGOPro. We use the "ygopro-core" engine and the accompaining scripts which are sub parts of YGOPro proper.'
+                    answer: 'Technically. Digimon TCG Engine is a team fork of YGOPro DevPro which is a software and team fork of an older version of YGOPro Dawn of a New Era, which is a software wrapper of YGOPro Percy, which is a fork of YGOPro. We use the "ygopro-core" engine and the accompaining scripts which are sub parts of YGOPro proper.'
                 },
                 {
                     question: 'Where are the Images?',

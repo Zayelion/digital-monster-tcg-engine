@@ -179,7 +179,7 @@ export class ControlButtons {
     }
 
     manualDisplay(query) {
-        // https://github.com/SalvationDevelopment/YGOSalvation-Server/blob/55e4f846c824d1718e9297de12ca46c6df9b6477/http/js/http-manual.js
+        // https://github.com/Digimon TCG EngineDevelopment/Digimon TCG Engine-Server/blob/55e4f846c824d1718e9297de12ca46c6df9b6477/http/js/http-manual.js
         const enabledClasses = [],
             disabledClasses = [];
 

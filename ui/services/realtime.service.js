@@ -15,10 +15,10 @@ function Connection() {
         const primusprotocol = (location.protocol === 'https:') ? 'wss://' : 'ws://';
         primus = Primus.connect(primusprotocol + process.env.WEBSOCKET);
         primus.on('open', () => {
-            console.log('Connected to YGOSalvation Server');
+            console.log('Connected to Digimon TCG Engine Server');
         });
         primus.on('close', () => {
-            console.log('Disconnected from YGOSalvation Server');
+            console.log('Disconnected from Digimon TCG Engine Server');
         });
 
         primus.on('data', onData);
