@@ -6,7 +6,7 @@ import { ChildProcess } from 'child_process';
 import { GameState } from './core/core';
 import { validate, validateSession } from './endpoint_users';
 import { saveDeck, deleteDeck } from './endpoint_decks';
-import { logDuel } from './endpoint_services';
+import { logDuel } from './routes/services';
 
 interface Client extends WebSocket {
   id?: string;

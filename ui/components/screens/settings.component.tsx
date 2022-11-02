@@ -12,7 +12,7 @@ export default function SettingsScreen() {
         fetch('/backgrounds')
             .then(response => response.json())
             .then(data => {
-                backgrounds = setBackgrounds(Array.isArray(data) ? data : []);
+                setBackgrounds(Array.isArray(data) ? data : []);
             });
 
         fetch('/covers')
@@ -41,15 +41,15 @@ export default function SettingsScreen() {
     }
 
     function Background() {
-        return backgrounds.map((background, i) => {
+        return (<>{backgrounds.map((background, i) => {
             return <option value={background.image.url} key={`key-${i}`}>{background.name}</option>;
-        });
+        })}</>);
     }
 
     function Covers() {
-        return covers.map((cover, i) => {
+        return (<>{covers.map((cover, i) => {
             return <option value={cover.image.url} key={`key-${i}`}> {cover.name}</option>;
-        });
+        })}</>);
     }
 
 

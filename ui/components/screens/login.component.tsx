@@ -301,10 +301,10 @@ export default function LoginScreen(props) {
     <div id="homecontainer">
       <span>
         <h1 className="shine superlogo">
-          <span>Digimon TCG Engine</span>
+          <span>Digimon</span>
         </h1>
       </span>
-      <ContainerModal />
+      <ScreenModal />
       <ul id="socialmediabuttons">
         <li>
           <a target="_blank" href="https://www.facebook.com" rel="noreferrer">
