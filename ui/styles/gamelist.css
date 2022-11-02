@@ -150,14 +150,14 @@ div[data-cardpool="OCG"] {
 }
 
 div[data-cardpool="OCG"]:not(.started) {
-    background-image: url(../img/ocg.png);
+    background-image: url(../public/images/ocg.png);
     background-size: 100% 100%;
     color: white;
     background-size: cover;
 }
 
 .started[data-cardpool="OCG"] {
-    background-image: url(../img/faded-ocg.png);
+    background-image: url(../public/images/faded-ocg.png);
     background-color: rgba(0, 0, 0, .5) !important;
     border: 1px solid grey;
     color: grey;
@@ -171,14 +171,14 @@ div[data-cardpool="OCG/TCG"] {
 }
 
 div[data-cardpool="TCG"]:not(.started) {
-    background-image: url(../img/tcg.png);
+    background-image: url(../public/images/tcg.png);
     background-size: cover;
     color: white;
     background-size: cover;
 }
 
 .started[data-cardpool="TCG"] {
-    background-image: url(../img/faded-tcg.png);
+    background-image: url(../public/images/faded-tcg.png);
     background-color: rgba(0, 0, 0, .5) !important;
     border: 1px solid grey;
     color: grey;
@@ -192,13 +192,13 @@ div[data-cardpool="OCG/TCG"] {
 }
 
 div[data-cardpool="OCG/TCG"] {
-    background-image: url(../img/tcgocg.png);
+    background-image: url(../public/images/tcgocg.png);
     background-size: cover;
     color: white;
 }
 
 .started[data-cardpool="OCG/TCG"] {
-    background-image: url(../img/faded-tcgocg.png);
+    background-image: url(../public/images/faded-tcgocg.png);
     background-color: rgba(0, 0, 0, .5) !important;
     border: 1px solid grey;
     color: grey;
@@ -207,14 +207,14 @@ div[data-cardpool="OCG/TCG"] {
 
 div[data-cardpool="Anime"]:not(.started) {
     /* Anime */
-    background-image: url(../img/anime.png);
+    background-image: url(../public/images/anime.png);
     background-size: cover;
     color: white;
     background-size: cover;
 }
 
 .started[data-cardpool="Anime"] {
-    background-image: url(../img/faded-anime.png);
+    background-image: url(../public/images/faded-anime.png);
     background-color: rgba(0, 0, 0, .5) !important;
     border: 1px solid grey;
     color: grey;
@@ -251,7 +251,7 @@ div[data-mode="Tag"] {
 }
 
 [data-arg] {
-    background-image: url('../img/arg.png') !important;
+    background-image: url('../public/images/arg.png') !important;
     background-color: rgba(0, 0, 0, .5) !important;
     background-size: cover;
     text-shadow: 0px 0px 19px black;
@@ -261,7 +261,7 @@ div[data-mode="Tag"] {
 }
 
 .started[data-arg] {
-    background-image: url('../img/faded-arg.png') !important;
+    background-image: url('../public/images/faded-arg.png') !important;
     background-color: rgba(0, 0, 0, .5) !important;
     background-size: cover;
     border: 1px solid grey;
@@ -269,7 +269,7 @@ div[data-mode="Tag"] {
 }
 
 [data-world-championship] {
-    background-image: url('../img/newgiohtoken.png') !important;
+    background-image: url('../public/images/newgiohtoken.png') !important;
     background-color: rgba(255, 255, 0, .5) !important;
     background-size: cover;
     text-shadow: 0px 0px 19px black;
@@ -278,7 +278,7 @@ div[data-mode="Tag"] {
 }
 
 .started[data-world-championship] {
-    background-image: url('../img/outnewgiohtoken.png') !important;
+    background-image: url('../public/images/outnewgiohtoken.png') !important;
     background-color: rgba(0, 0, 0, .5) !important;
     background-size: cover;
     border: 1px solid grey;
@@ -286,7 +286,7 @@ div[data-mode="Tag"] {
 }
 
 [data-banlist*="Goat"] {
-    background-image: url('../img/goat.png') !important;
+    background-image: url('../public/images/goat.png') !important;
     background-color: rgba(0, 0, 0, .5) !important;
     background-size: contain !important;
     text-shadow: 0px 0px 19px black;
