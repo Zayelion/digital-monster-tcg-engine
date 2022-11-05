@@ -1,5 +1,5 @@
 import React from 'react';
-import { setLanguage } from './../../services/useTranslation';
+
 
 export default function SuperFooterComponent() {
 

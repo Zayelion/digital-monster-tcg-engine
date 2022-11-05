@@ -1,56 +1,47 @@
 function Navi(initialStates) {
-    const states = Object.assign({}, initialStates),
-        events = {},
-        subscriptions = {};
+  const states = Object.assign({}, initialStates),
+    events = {},
+    subscriptions = {};
 
+  function listen(action, behavior) {
+    if (events[action]) {
+      return;
+    }
+    states[action] = {};
+    events[action] = behavior;
+    console.log('registering:', action);
+  }
 
-    function listen(action, behavior) {
-
-        if (events[action]) {
-            return;
-        }
-        states[action] = {};
-        events[action] = behavior;
-        console.log('registering:', action);
+  function hey(event) {
+    if (!events[event.action] && !subscriptions[event.action]) {
+      console.log(new Error(`Action ${event.action}} is not registered`));
     }
 
-    function hey(event) {
-
-        if (!events[event.action] && !subscriptions[event.action]) {
-            console.log(new Error(`Action ${event.action}} is not registered`));
-        }
-
-        if (events[event.action]) {
-            events[event.action](event, states[event.action]);
-        }
-
-        if (subscriptions[event.action]) {
-            subscriptions[event.action].forEach((behavior) => {
-                behavior(event);
-            });
-        }
+    if (events[event.action]) {
+      events[event.action](event, states[event.action]);
     }
 
-    function watchOut(action, behavior) {
-        if (!subscriptions[action]) {
-            subscriptions[action] = [];
-        }
+    if (subscriptions[event.action]) {
+      subscriptions[event.action].forEach((behavior) => {
+        behavior(event);
+      });
+    }
+  }
 
-
-        subscriptions[action].push(behavior);
-        console.log('Watching:', action);
+  function watchOut(action, behavior) {
+    if (!subscriptions[action]) {
+      subscriptions[action] = [];
     }
 
-    return {
-        listen,
-        hey,
-        watchOut
-    };
-}
+    subscriptions[action].push(behavior);
+    console.log('Watching:', action);
+  }
 
-export const {
+  return {
     listen,
     hey,
     watchOut
-} = new Navi({});
+  };
+}
 
+export const { listen, hey, watchOut } = new Navi({});

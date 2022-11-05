@@ -2,6 +2,7 @@ import { Schema, model } from 'mongoose';
 import crypto from 'crypto';
 import jwt, { Jwt } from 'jsonwebtoken';
 import mongooseUniqueValidator from 'mongoose-unique-validator';
+import { DeckSchema } from './decks';
 
 const { SECRECT } = process.env;
 const SESSION_LIMIT = 3600000; // 1hr
@@ -28,6 +29,8 @@ export const UserSchema = new Schema(
     salt: String,
     reset: Boolean,
     recovery: String,
+    decks: [DeckSchema],
+    ownedCards: [String]
   },
   { timestamps: true }
 );
@@ -66,7 +69,8 @@ UserSchema.methods.toAuthJSON = function () {
     username: this.username,
     email: this.email,
     token: this.generateJWT(),
-    gateways: this.gateways
+    ownedCards: this.ownedCards,
+    decks: this.decks
   };
 };
 

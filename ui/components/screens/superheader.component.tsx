@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { listen, watchOut } from '../../services/listener.service';
-import { getTranslation } from './../../services/useTranslation';
+
 
 export default function SuperHeaderComponent() {
-  const [isLoggedIn, setLogInStatus] = useState(true),
-    [translation, setTranslation] = useState(getTranslation());
+  const [isLoggedIn, setLogInStatus] = useState(true)
 
   useEffect(() => {
     listen('LOGIN_SUPER_HEADER', () => {
@@ -26,11 +25,11 @@ export default function SuperHeaderComponent() {
       <>
         <li className="psudolinksingle">
           <Link href="/deckedit" scroll={true}>
-            {translation.DECKEDIT}
+            Deck Edit
           </Link>
         </li>
         <li className="psudolinksingle">
-          <Link href="/host">{translation.HOST}</Link>
+          <Link href="/host">Host</Link>
         </li>
         <li className="psudolinksingle">
           <Link href="/gamelist">Game List</Link>
